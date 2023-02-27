@@ -1,5 +1,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/drivers/gpio.h>
+#include <zephyr/logging/log.h>
+
+/* Register logger */
+LOG_MODULE_REGISTER(lab07, LOG_LEVEL_DBG);
 
 /* Function declarations */
 int check_devices_ready(void);
@@ -109,11 +113,13 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	if (state == STATE_SLEEP) {
 		// Wake and resume from state before sleep
+		LOG_INF("Waking from sleep state");
 		state = STATE_DEFAULT;
 		led_state = (led_state - 1) % 3;
 	}
 	else if (state == STATE_DEFAULT) {
 		// Sleep (turn all action LEDs off)
+		LOG_INF("Entering sleep state");
 		state = STATE_SLEEP;
 		gpio_pin_set_dt(&buzzer_led, 0);
 		gpio_pin_set_dt(&ivdrip_led, 0);
@@ -129,16 +135,18 @@ void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pin
 {
     if (!(delay < 100 || delay > 2000) && state == STATE_DEFAULT){
 		delay -= DEC_ON_TIME_MS;
-		printk("Delay: %d\n", delay);
 
 		// If LED on-time decreases below 100 ms, set to error state
 		if (delay < 100) {
 			state = STATE_ERROR;
 			gpio_pin_set_dt(&error_led, 1);
+			LOG_ERR("Maximum frequency reached. Press reset button to resume operation.");
+		}
+		else {
+			LOG_INF("Action LED on-time = %d ms", delay);
 		}
 	}
 	else if (state == STATE_ERROR) {
-		// Do nothing on error state
 		noop
 	}
 }
@@ -147,26 +155,31 @@ void on_freq_down(const struct device *dev, struct gpio_callback *cb, uint32_t p
 {
     if (!(delay < 100 || delay > 2000) && state == STATE_DEFAULT){
 		delay += INC_ON_TIME_MS;
-		printk("Delay: %d\n", delay);
 
 		// If LED on-time increases above 2000 ms, set to error state
 		if (delay > 2000) {
 			state = STATE_ERROR;
 			gpio_pin_set_dt(&error_led, 1);
+			LOG_ERR("Minimum frequency reached. Press reset button to resume operation.");
+		}
+		else {
+			LOG_INF("Action LED on-time = %d ms", delay);
 		}
 	}
 	else if (state == STATE_ERROR) {
-		// Do nothing on error state
 		noop
 	}
 }
 
 void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-	// Turn error LED off, set LED on-time to default 1000 ms, return to default state
+	// Turn error LED off, set LED on-time to default 1000 ms
+	// Return to default state if not in sleep state
+	LOG_INF("Resetting action LED on-time to 1000 ms");
 	gpio_pin_set_dt(&error_led, 0);
 	delay = LED_ON_TIME_MS;
-	state = STATE_DEFAULT;
+	state = state != STATE_SLEEP ? STATE_DEFAULT : STATE_SLEEP;
+	LOG_INF("%s state", state != STATE_SLEEP ? "Returning to default" : "Staying in sleep");
 }
 
 void setup_callbacks(void)
@@ -212,11 +225,11 @@ void main(void)
 	int err;
 	err = check_devices_ready();
 	if (err) {
-		printk("GPIO%d interface not ready.\n", err < -1 ? 0 : 1);
+		LOG_WRN("GPIO%d interface not ready.\n", err < -1 ? 0 : 1);
 	}
 	err = configure_pins();
 	if (err) {
-		printk("Error configuring IO channels/pins.\n");
+		LOG_WRN("Error configuring IO channels/pins.\n");
 	}
 	setup_callbacks();
 	
