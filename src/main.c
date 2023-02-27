@@ -32,6 +32,8 @@ void set_state_LEDs(void);
 #define LED_ON_TIME_MS 1000
 #define INC_ON_TIME_MS 100
 #define DEC_ON_TIME_MS 100
+#define MAX_ON_TIME_MS 2000
+#define MIN_ON_TIME_MS 100
 
 /* Devicetree node identifiers for the LEDs. */
 #define LED0_NODE DT_ALIAS(heartbeat)
@@ -133,11 +135,11 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 
 void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    if (!(delay < 100 || delay > 2000) && state == STATE_DEFAULT){
+    if (!(delay < MIN_ON_TIME_MS || delay > MAX_ON_TIME_MS) && state == STATE_DEFAULT){
 		delay -= DEC_ON_TIME_MS;
 
 		// If LED on-time decreases below 100 ms, set to error state
-		if (delay < 100) {
+		if (delay < MIN_ON_TIME_MS) {
 			state = STATE_ERROR;
 			gpio_pin_set_dt(&error_led, 1);
 			LOG_ERR("Maximum frequency reached. Press reset button to resume operation.");
@@ -148,18 +150,7 @@ void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pin
 	}
 	else if (state == STATE_ERROR) {
 		noop
-	}
-}
-
-void on_freq_down(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-    if (!(delay < 100 || delay > 2000) && state == STATE_DEFAULT){
-		delay += INC_ON_TIME_MS;
-
-		// If LED on-time increases above 2000 ms, set to error state
-		if (delay > 2000) {
-			state = STATE_ERROR;
-			gpio_pin_set_dt(&error_led, 1);
+	}  SDA                                                                                                                                                                                                                                                           SS LSSSSSSSSSSor_led, 1);
 			LOG_ERR("Minimum frequency reached. Press reset button to resume operation.");
 		}
 		else {
@@ -243,5 +234,4 @@ void main(void)
 			k_msleep(100);
 		}
 	}
-	
 }
