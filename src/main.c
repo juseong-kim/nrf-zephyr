@@ -23,7 +23,7 @@ void set_state_LEDs(void);
 #define LED_STATE_IV 1
 #define LED_STATE_A 2
 
-/* 1000 msec = 1 sec */
+/* Time intervals */
 #define HEARTBEAT_PERIOD 1000
 #define LED_ON_TIME_MS 1000
 #define INC_ON_TIME_MS 100
@@ -54,11 +54,13 @@ static const struct gpio_dt_spec reset = GPIO_DT_SPEC_GET(B3_NODE, gpios);
 /* Initialize variables */
 static int delay = LED_ON_TIME_MS;
 static int state = STATE_DEFAULT, state_prev = STATE_DEFAULT;
-static int led_state = LED_STATE_B, led_state_prev = LED_STATE_B;
+static int led_state = LED_STATE_B;
 
 int check_devices_ready(void)
 {
+	// Check gpio0 interface
 	if (!device_is_ready(heartbeat_led.port)) return -2;
+	// Check gpio1 interface
     if (!device_is_ready(error_led.port)) return -1;
 	return 0;
 }
@@ -66,6 +68,7 @@ int check_devices_ready(void)
 int configure_pins(void)
 {
 	int ret = 0;
+	// Configure output LED pins
 	ret = gpio_pin_configure_dt(&heartbeat_led, GPIO_OUTPUT_ACTIVE);
 	if (ret < 0) {
 		return -1;
@@ -82,6 +85,7 @@ int configure_pins(void)
 	if (ret < 0) {
 		return -1;
 	}
+	// Configure input button pins
 	ret = gpio_pin_configure_dt(&sleep, GPIO_INPUT);
 	if (ret < 0){
 		return -1;
@@ -104,17 +108,19 @@ int configure_pins(void)
 void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
 	if (state == STATE_SLEEP) {
+		// Wake and resume from state before sleep
 		state = STATE_DEFAULT;
 		led_state = (led_state - 1) % 3;
 	}
 	else if (state == STATE_DEFAULT) {
+		// Sleep (turn all action LEDs off)
 		state = STATE_SLEEP;
-		// turn off LEDs
 		gpio_pin_set_dt(&buzzer_led, 0);
 		gpio_pin_set_dt(&ivdrip_led, 0);
 		gpio_pin_set_dt(&alarm_led, 0);
 	}
-	else { // Error state
+	else {
+		// Error state
 		noop
 	}
 }
@@ -124,12 +130,15 @@ void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pin
     if (!(delay < 100 || delay > 2000) && state == STATE_DEFAULT){
 		delay -= DEC_ON_TIME_MS;
 		printk("Delay: %d\n", delay);
+
+		// If LED on-time decreases below 100 ms, set to error state
 		if (delay < 100) {
 			state = STATE_ERROR;
 			gpio_pin_set_dt(&error_led, 1);
 		}
 	}
 	else if (state == STATE_ERROR) {
+		// Do nothing on error state
 		noop
 	}
 }
@@ -139,32 +148,35 @@ void on_freq_down(const struct device *dev, struct gpio_callback *cb, uint32_t p
     if (!(delay < 100 || delay > 2000) && state == STATE_DEFAULT){
 		delay += INC_ON_TIME_MS;
 		printk("Delay: %d\n", delay);
+
+		// If LED on-time increases above 2000 ms, set to error state
 		if (delay > 2000) {
 			state = STATE_ERROR;
 			gpio_pin_set_dt(&error_led, 1);
 		}
 	}
 	else if (state == STATE_ERROR) {
+		// Do nothing on error state
 		noop
 	}
 }
 
 void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-	printk("Reset\n");
+	// Turn error LED off, set LED on-time to default 1000 ms, return to default state
 	gpio_pin_set_dt(&error_led, 0);
 	delay = LED_ON_TIME_MS;
 	state = STATE_DEFAULT;
 }
 
-/* Define variables of type static struct gpio_callback */
-static struct gpio_callback sleep_cb;
-static struct gpio_callback freq_up_cb;
-static struct gpio_callback freq_down_cb;
-static struct gpio_callback reset_cb;
-
 void setup_callbacks(void)
 {
+	/* Define variables of type static struct gpio_callback */
+	static struct gpio_callback sleep_cb;
+	static struct gpio_callback freq_up_cb;
+	static struct gpio_callback freq_down_cb;
+	static struct gpio_callback reset_cb;
+
 	/* Configure interrupts on button pins */
 	gpio_pin_interrupt_configure_dt(&sleep, GPIO_INT_EDGE_TO_ACTIVE);
 	gpio_pin_interrupt_configure_dt(&freq_up, GPIO_INT_EDGE_TO_ACTIVE);
@@ -185,6 +197,9 @@ void setup_callbacks(void)
 }
 
 void set_state_LEDs(void) {
+	/* Set states of LEDs to the next state */
+	gpio_pin_set_dt(&heartbeat_led, led_state == LED_STATE_A ? 1 : 0); // TODO set to independent 1 Hz
+
 	gpio_pin_set_dt(&buzzer_led, led_state == LED_STATE_B ? 1 : 0);
 	gpio_pin_set_dt(&ivdrip_led, led_state == LED_STATE_IV ? 1 : 0);
 	gpio_pin_set_dt(&alarm_led, led_state == LED_STATE_A ? 1 : 0);
@@ -193,6 +208,7 @@ void set_state_LEDs(void) {
 
 void main(void)
 {
+	// Check that devices, pins, and callbacks are ready and configured
 	int err;
 	err = check_devices_ready();
 	if (err) {
@@ -204,14 +220,9 @@ void main(void)
 	}
 	setup_callbacks();
 	
-	// int heartbeat_val;
+	// Run LED sequence
 	while (1) {
 		if (state == STATE_DEFAULT) {
-			// heartbeat_val = gpio_pin_toggle_dt(&heartbeat_led);
-			// if (heartbeat_val < 0) {
-			// 	return;
-			// }
-			// k_msleep(delay);
 			set_state_LEDs();
 			k_msleep(delay);
 		}
