@@ -2,9 +2,8 @@
 BME590L Medical Electrical Equipment  
 Juseong (Joe) Kim
 
-## Remaining Questions
-1. Why do the LEDs and buttons show no response?
-1. How do you set the LED groups (1. heartbeat, 2. buzzer + ivdrip + alarm) to toggle at different frequencies? Is this achievable with k_msleep()? Is there a way to send the toggling of heartbeat_led to the background?
+## Current status
+Fully functional, except toggling of heartbeat LED at 1 Hz.
 
 ## Part 4
 ### What is the difference in configuring a GPIO LED pin to be GPIO ACTIVE LOW vs GPIO ACTIVE HIGH?
