@@ -30,7 +30,7 @@
             label = "Alarm LED";
         };
         led4: led_4 {
-            gpios = <&gpio1 3 GPIO_ACTIVE_HIGH>;
+            gpios = <&gpio1 3 GPIO_ACTIVE_LOW>;
             label = "Error";
         };
     };
