@@ -234,13 +234,17 @@ void main(void)
 	}
 	setup_callbacks();
 	
-	// Run LED sequence
+	// Execute control logic
 	while (1) {
 		if (state == STATE_DEFAULT) {
 			set_state_LEDs();
 			k_msleep(delay);
 		}
-		else if (state == STATE_SLEEP || state == STATE_ERROR) {
+		else if (state == STATE_SLEEP ) {
+			gpio_pin_toggle_dt(&heartbeat_led);
+			k_msleep(1000);
+		}
+		else { // Error state
 			k_msleep(100);
 		}
 	}
