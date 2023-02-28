@@ -59,7 +59,7 @@ static const struct gpio_dt_spec reset = GPIO_DT_SPEC_GET(B3_NODE, gpios);
 
 /* Initialize variables */
 static int delay = LED_ON_TIME_MS;
-static int state = STATE_DEFAULT, state_prev = STATE_DEFAULT;
+static int state = STATE_DEFAULT;
 static int led_state = LED_STATE_B;
 
 int check_devices_ready(void)
@@ -111,59 +111,6 @@ int configure_pins(void)
 	return 0;
 }
 
-void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-	if (state == STATE_SLEEP) {
-		// Wake and resume from state before sleep
-		LOG_INF("Waking from sleep state");
-		state = STATE_DEFAULT;
-		led_state = (led_state - 1) % 3;
-	}
-	else if (state == STATE_DEFAULT) {
-		// Sleep (turn all action LEDs off)
-		LOG_INF("Entering sleep state");
-		state = STATE_SLEEP;
-		gpio_pin_set_dt(&buzzer_led, 0);
-		gpio_pin_set_dt(&ivdrip_led, 0);
-		gpio_pin_set_dt(&alarm_led, 0);
-	}
-	else {
-		// Error state
-		noop
-	}
-}
-
-void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-    if (!(delay < MIN_ON_TIME_MS || delay > MAX_ON_TIME_MS) && state == STATE_DEFAULT){
-		delay -= DEC_ON_TIME_MS;
-
-		// If LED on-time decreases below 100 ms, set to error state
-		if (delay < MIN_ON_TIME_MS) {
-			state = STATE_ERROR;
-			gpio_pin_set_dt(&error_led, 1);
-			LOG_ERR("Maximum frequency reached. Press reset button to resume operation.");
-		}
-		else {
-			LOG_INF("Action LED on-time = %d ms", delay);
-		}
-	}
-	else if (state == STATE_ERROR) {
-		noop
-	}
-}
-
-void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
-{
-	// Turn error LED off, set LED on-time to default 1000 ms
-	// Return to default state if not in sleep state
-	LOG_INF("Resetting action LED on-time to 1000 ms");
-	gpio_pin_set_dt(&error_led, 0);
-	delay = LED_ON_TIME_MS;
-	state = state != STATE_SLEEP ? STATE_DEFAULT : STATE_SLEEP;
-	LOG_INF("%s state", state != STATE_SLEEP ? "Returning to default" : "Staying in sleep");
-}
-
 void setup_callbacks(void)
 {
 	/* Define variables of type static struct gpio_callback */
@@ -191,9 +138,81 @@ void setup_callbacks(void)
 	gpio_add_callback(reset.port, &reset_cb);
 }
 
+void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+	if (state == STATE_SLEEP) {
+		// Wake and resume from state before sleep
+		LOG_INF("Waking from sleep state");
+		state = STATE_DEFAULT;
+		led_state = (led_state - 1) % 3;
+	}
+	else if (state == STATE_DEFAULT) {
+		// Sleep (turn all action LEDs off)
+		LOG_INF("Entering sleep state");
+		state = STATE_SLEEP;
+		gpio_pin_set_dt(&buzzer_led, 0);
+		gpio_pin_set_dt(&ivdrip_led, 0);
+		gpio_pin_set_dt(&alarm_led, 0);
+	}
+	else { // Error state
+		noop
+	}
+}
+
+void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    if (!(delay < MIN_ON_TIME_MS || delay > MAX_ON_TIME_MS) && state == STATE_DEFAULT){
+		delay -= DEC_ON_TIME_MS;
+
+		// If LED on-time decreases below 100 ms, set to error state
+		if (delay < MIN_ON_TIME_MS) {
+			state = STATE_ERROR;
+			gpio_pin_set_dt(&error_led, 1);
+			LOG_ERR("Maximum frequency reached. Press reset button to resume operation.");
+		}
+		else {
+			LOG_INF("Action LED on-time = %d ms", delay);
+		}
+	}
+	else if (state == STATE_ERROR) {
+		noop
+	}
+}
+
+void on_freq_down(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+    if (!(delay < MIN_ON_TIME_MS || delay > MAX_ON_TIME_MS) && state == STATE_DEFAULT){
+		delay += INC_ON_TIME_MS;
+
+		// If LED on-time increases above 2000 ms, set to error state
+		if (delay > MAX_ON_TIME_MS) {
+			state = STATE_ERROR;
+			gpio_pin_set_dt(&error_led, 1);
+			LOG_ERR("Minimum frequency reached. Press reset button to resume operation.");
+		}
+		else {
+			LOG_INF("Action LED on-time = %d ms", delay);
+		}
+	}
+	else if (state == STATE_ERROR) {
+		noop
+	}
+}
+
+void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
+{
+	// Turn error LED off, set LED on-time to default 1000 ms
+	// Return to default state if not in sleep state
+	LOG_INF("Resetting action LED on-time to 1000 ms");
+	gpio_pin_set_dt(&error_led, 0);
+	delay = LED_ON_TIME_MS;
+	state = state != STATE_SLEEP ? STATE_DEFAULT : STATE_SLEEP;
+	LOG_INF("%s state", state != STATE_SLEEP ? "Returning to default" : "Staying in sleep");
+}
+
 void set_state_LEDs(void) {
 	/* Set states of LEDs to the next state */
-	gpio_pin_set_dt(&heartbeat_led, led_state == LED_STATE_A ? 1 : 0); // TODO set to independent 1 Hz
+	gpio_pin_set_dt(&heartbeat_led, led_state == LED_STATE_A ? 1 : 0); // TODO set to independent 1 Hz, currently toggles with alarm_led
 
 	gpio_pin_set_dt(&buzzer_led, led_state == LED_STATE_B ? 1 : 0);
 	gpio_pin_set_dt(&ivdrip_led, led_state == LED_STATE_IV ? 1 : 0);
