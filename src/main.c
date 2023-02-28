@@ -75,19 +75,19 @@ int configure_pins(void)
 {
 	int ret = 0;
 	// Configure output LED pins
-	ret = gpio_pin_configure_dt(&heartbeat_led, GPIO_OUTPUT_ACTIVE);
+	ret = gpio_pin_configure_dt(&heartbeat_led, GPIO_OUTPUT_LOW);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = gpio_pin_configure_dt(&ivdrip_led, GPIO_OUTPUT_ACTIVE);
+	ret = gpio_pin_configure_dt(&ivdrip_led, GPIO_OUTPUT_LOW);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = gpio_pin_configure_dt(&alarm_led, GPIO_OUTPUT_ACTIVE);
+	ret = gpio_pin_configure_dt(&alarm_led, GPIO_OUTPUT_LOW);
 	if (ret < 0) {
 		return -1;
 	}
-	ret = gpio_pin_configure_dt(&buzzer_led, GPIO_OUTPUT_ACTIVE);
+	ret = gpio_pin_configure_dt(&buzzer_led, GPIO_OUTPUT_LOW);
 	if (ret < 0) {
 		return -1;
 	}
@@ -143,15 +143,6 @@ void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pin
 			state = STATE_ERROR;
 			gpio_pin_set_dt(&error_led, 1);
 			LOG_ERR("Maximum frequency reached. Press reset button to resume operation.");
-		}
-		else {
-			LOG_INF("Action LED on-time = %d ms", delay);
-		}
-	}
-	else if (state == STATE_ERROR) {
-		noop
-	}  SDA                                                                                                                                                                                                                                                           SS LSSSSSSSSSSor_led, 1);
-			LOG_ERR("Minimum frequency reached. Press reset button to resume operation.");
 		}
 		else {
 			LOG_INF("Action LED on-time = %d ms", delay);
