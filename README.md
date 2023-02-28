@@ -3,7 +3,7 @@ BME590L Medical Electrical Equipment
 Juseong (Joe) Kim
 
 ## Current status
-Fully functional, except toggling of heartbeat LED at 1 Hz.  
+Fully functional, except the toggling of heartbeat LED at 1 Hz (*heartbeat_led* currently toggles with *alarm_led*; this is to be fixed with threads).  
 All four buttons are prone to switch bouncing (i.e. single press is registered as two presses).
 
 ## Part 4
