@@ -3,10 +3,10 @@ BME590L Medical Electrical Equipment
 Juseong (Joe) Kim
 
 ## Current status
-Fully functional, except the toggling of heartbeat LED at 1 Hz (*heartbeat_led* currently toggles with *alarm_led*; this is to be fixed with threads).  
+Fully functional.  
 All four buttons are prone to switch bouncing (i.e. single press is registered as two presses).
 
-## Part 4
+## Lab 07 Questions
 ### What is the difference in configuring a GPIO LED pin to be GPIO ACTIVE LOW vs GPIO ACTIVE HIGH?
 GPIO_ACTIVE_HIGH means that the LED is on when the pin is set to its high state, and off when the pin is in its low state.  
 The converse is true for GPIO_ACTIVE_LOW (LED on if pin low, off if pin high).
