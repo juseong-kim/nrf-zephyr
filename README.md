@@ -7,9 +7,7 @@ Fully functional.
 All four buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
 
 ## Remaining Questions
-- What is the expected behavior of the reset button when in the sleep state?
-- Why do the LEDs turn on when set to 1 if they were configured to be GPIO_ACTIVE_LOW?
-- Is it necessary to check error codes for each *gpio_pin_set_dt()* and *gpio_pin_toggle_dt()* call?
+1. Can callback functions and timer functions return an error code (int)?
 
 ## Lab 07 Questions
 ### What is the difference in configuring a GPIO LED pin to be GPIO ACTIVE LOW vs GPIO ACTIVE HIGH?

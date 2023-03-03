@@ -3,12 +3,12 @@
 #include <zephyr/logging/log.h>
 
 /* Register logger */
-LOG_MODULE_REGISTER(lab07, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(ledControl, LOG_LEVEL_DBG);
 
 /* Function declarations */
 int check_devices_ready(void);
 int configure_pins(void);
-void setup_callbacks(void);
+int setup_callbacks(void);
 void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
 void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
 void on_freq_down(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
@@ -63,56 +63,39 @@ K_TIMER_DEFINE(action_timer, set_action_leds, NULL);
 /* Initialize state */
 static int state = STATE_DEFAULT;
 
+/* Function error code */
+static int err;
+
 int check_devices_ready(void)
 {
 	// Check gpio0 interface
 	if (!device_is_ready(heartbeat_led.port)) return -2;
 	// Check gpio1 interface
     if (!device_is_ready(error_led.port)) return -1;
+
 	return 0;
 }
 
 int configure_pins(void)
 {
-	int ret = 0;
 	// Output LED pins
-	ret = gpio_pin_configure_dt(&heartbeat_led, GPIO_OUTPUT_LOW);
-	if (ret < 0) {
-		return -1;
-	}
-	ret = gpio_pin_configure_dt(&ivdrip_led, GPIO_OUTPUT_LOW);
-	if (ret < 0) {
-		return -1;
-	}
-	ret = gpio_pin_configure_dt(&alarm_led, GPIO_OUTPUT_LOW);
-	if (ret < 0) {
-		return -1;
-	}
-	ret = gpio_pin_configure_dt(&buzzer_led, GPIO_OUTPUT_LOW);
-	if (ret < 0) {
-		return -1;
-	}
+	err = gpio_pin_configure_dt(&heartbeat_led, GPIO_OUTPUT_LOW);
+	err += gpio_pin_configure_dt(&ivdrip_led, GPIO_OUTPUT_LOW);
+	err += gpio_pin_configure_dt(&alarm_led, GPIO_OUTPUT_LOW);
+	err += gpio_pin_configure_dt(&buzzer_led, GPIO_OUTPUT_LOW);
+	if (err) return -1;
+
 	// Input button pins
-	ret = gpio_pin_configure_dt(&sleep, GPIO_INPUT);
-	if (ret < 0){
-		return -1;
-	}
-	ret = gpio_pin_configure_dt(&freq_up, GPIO_INPUT);
-	if (ret < 0){
-		return -1;
-	}
-	ret = gpio_pin_configure_dt(&freq_down, GPIO_INPUT);
-	if (ret < 0){
-		return -1;
-	}
-	ret = gpio_pin_configure_dt(&reset, GPIO_INPUT);
-	if (ret < 0){
-		return -1;
-	}
+	err = gpio_pin_configure_dt(&sleep, GPIO_INPUT);
+	err += gpio_pin_configure_dt(&freq_up, GPIO_INPUT);
+	err += gpio_pin_configure_dt(&freq_down, GPIO_INPUT);
+	err += gpio_pin_configure_dt(&reset, GPIO_INPUT);
+	if (err) return -2;
+
 	return 0;
 }
 
-void setup_callbacks(void)
+int setup_callbacks(void)
 {
 	/* Define variables of type static struct gpio_callback */
 	static struct gpio_callback sleep_cb;
@@ -121,10 +104,11 @@ void setup_callbacks(void)
 	static struct gpio_callback reset_cb;
 
 	/* Configure interrupts on button pins */
-	gpio_pin_interrupt_configure_dt(&sleep, GPIO_INT_EDGE_TO_ACTIVE);
-	gpio_pin_interrupt_configure_dt(&freq_up, GPIO_INT_EDGE_TO_ACTIVE);
-	gpio_pin_interrupt_configure_dt(&freq_down, GPIO_INT_EDGE_TO_ACTIVE);
-	gpio_pin_interrupt_configure_dt(&reset, GPIO_INT_EDGE_TO_ACTIVE);
+	err = gpio_pin_interrupt_configure_dt(&sleep, GPIO_INT_EDGE_TO_ACTIVE);
+	err += gpio_pin_interrupt_configure_dt(&freq_up, GPIO_INT_EDGE_TO_ACTIVE);
+	err += gpio_pin_interrupt_configure_dt(&freq_down, GPIO_INT_EDGE_TO_ACTIVE);
+	err += gpio_pin_interrupt_configure_dt(&reset, GPIO_INT_EDGE_TO_ACTIVE);
+	if (err) return -1;
 
 	/* Initialize gpio_callback variables */
 	gpio_init_callback(&sleep_cb, on_sleep, BIT(sleep.pin));
@@ -133,10 +117,13 @@ void setup_callbacks(void)
 	gpio_init_callback(&reset_cb, on_reset, BIT(reset.pin));
 
 	/* Attach callback functions */
-	gpio_add_callback(sleep.port, &sleep_cb);
-	gpio_add_callback(freq_up.port, &freq_up_cb);
-	gpio_add_callback(freq_down.port, &freq_down_cb);
-	gpio_add_callback(reset.port, &reset_cb);
+	err = gpio_add_callback(sleep.port, &sleep_cb);
+	err += gpio_add_callback(freq_up.port, &freq_up_cb);
+	err += gpio_add_callback(freq_down.port, &freq_down_cb);
+	err += gpio_add_callback(reset.port, &reset_cb);
+	if (err) return -2;
+
+	return 0;
 }
 
 /* Callbacks */
@@ -154,9 +141,12 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 		LOG_INF("Entering sleep state");
 		state = STATE_SLEEP;
 		// Sleep (turn all action LEDs off and stop timer to keep them off)
-		gpio_pin_set_dt(&buzzer_led, 0);
-		gpio_pin_set_dt(&ivdrip_led, 0);
-		gpio_pin_set_dt(&alarm_led, 0);
+		err = gpio_pin_set_dt(&buzzer_led, 0);
+		err += gpio_pin_set_dt(&ivdrip_led, 0);
+		err += gpio_pin_set_dt(&alarm_led, 0);
+		if (err) {
+			LOG_ERR("Error turning off all action LEDs.");
+		}
 		k_timer_stop(&action_timer);
 	}
 	else { // Error state
@@ -172,10 +162,12 @@ void on_freq_up(const struct device *dev, struct gpio_callback *cb, uint32_t pin
 		if (aLEDs.delay < MIN_ON_TIME_MS) {
 			LOG_ERR("Maximum frequency reached. Press reset button to resume operation.");
 			state = STATE_ERROR;
-			gpio_pin_set_dt(&error_led, 1);
-			gpio_pin_set_dt(&buzzer_led, 1);
-			gpio_pin_set_dt(&ivdrip_led, 1);
-			gpio_pin_set_dt(&alarm_led, 1);
+			err = gpio_pin_set_dt(&error_led, 1);
+			if (err) LOG_ERR("Error setting error LED.");
+			err = gpio_pin_set_dt(&buzzer_led, 1);
+			err += gpio_pin_set_dt(&ivdrip_led, 1);
+			err += gpio_pin_set_dt(&alarm_led, 1);
+			if (err) LOG_ERR("Error setting action LEDs.");
 			k_timer_stop(&action_timer);
 		}
 		else {
@@ -197,11 +189,14 @@ void on_freq_down(const struct device *dev, struct gpio_callback *cb, uint32_t p
 		if (aLEDs.delay > MAX_ON_TIME_MS) {
 			LOG_ERR("Minimum frequency reached. Press reset button to resume operation.");
 			state = STATE_ERROR;
-			gpio_pin_set_dt(&error_led, 1);
-			gpio_pin_set_dt(&buzzer_led, 1);
-			gpio_pin_set_dt(&ivdrip_led, 1);
-			gpio_pin_set_dt(&alarm_led, 1);
+			err = gpio_pin_set_dt(&error_led, 1);
+			if (err) LOG_ERR("Error setting error LED.");
+			err = gpio_pin_set_dt(&buzzer_led, 1);
+			err += gpio_pin_set_dt(&ivdrip_led, 1);
+			err += gpio_pin_set_dt(&alarm_led, 1);
+			if (err) LOG_ERR("Error setting action LEDs.");
 			k_timer_stop(&action_timer);
+
 		}
 		else {
 			// Set action LED toggling to new frequency
@@ -216,29 +211,25 @@ void on_freq_down(const struct device *dev, struct gpio_callback *cb, uint32_t p
 
 void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-	LOG_INF("Resetting action LED on-time to 1000 ms");
+	LOG_INF("Resetting device with default action LED on-time (1000 ms)");
 	gpio_pin_set_dt(&error_led, 0);
 
-	// Restart action LEDs timer with default frequency (1 Hz)
+	state = STATE_DEFAULT;
 	aLEDs.delay= LED_ON_TIME_MS;
 	restart_timer(&action_timer, aLEDs.delay);
-
-	// TODO what is reset button behavior when in sleep state?
-	state = STATE_DEFAULT;
-	// Return to default state if not in sleep state
-	// state = state != STATE_SLEEP ? STATE_DEFAULT : STATE_SLEEP;
-	// LOG_INF("%s state", state != STATE_SLEEP ? "Returning to default" : "Staying in sleep");
 }
 
 void toggle_heartbeat_led(struct k_timer *heartbeat_timer){
-	gpio_pin_toggle_dt(&heartbeat_led);
+	err = gpio_pin_toggle_dt(&heartbeat_led);
+	if (err) LOG_ERR("Error toggling hearbeat LED");
 }
 
 void set_action_leds(struct k_timer *action_timer){
 	/* Set states of LEDs to the next state */
-	gpio_pin_set_dt(&buzzer_led, aLEDs.state == LED_STATE_B ? 1 : 0);
-	gpio_pin_set_dt(&ivdrip_led, aLEDs.state == LED_STATE_IV ? 1 : 0);
-	gpio_pin_set_dt(&alarm_led, aLEDs.state == LED_STATE_A ? 1 : 0);
+	err = gpio_pin_set_dt(&buzzer_led, aLEDs.state == LED_STATE_B ? 1 : 0);
+	err += gpio_pin_set_dt(&alarm_led, aLEDs.state == LED_STATE_A ? 1 : 0);
+	err += gpio_pin_set_dt(&ivdrip_led, aLEDs.state == LED_STATE_IV ? 1 : 0);
+	if (err) LOG_ERR("Error setting action LEDs to next state.");
 	aLEDs.state = (aLEDs.state + 1) % 3;
 }
 
@@ -251,22 +242,18 @@ void restart_timer(struct k_timer *timer, int duration_ms){
 void main(void)
 {
 	// Check that devices, pins, and callbacks are ready and configured
-	int err;
 	err = check_devices_ready();
-	if (err) {
-		LOG_ERR("GPIO%d interface not ready.", err < -1 ? 0 : 1);
-	}
+	if (err) LOG_ERR("GPIO%d interface not ready.", err < -1 ? 0 : 1);
 	err = configure_pins();
-	if (err) {
-		LOG_ERR("Error configuring IO channels/pins.");
-	}
-	setup_callbacks();
+	if (err) LOG_ERR("Error configuring %s pins.", err < -1 ? "input button" : "output LED");
+	err = setup_callbacks();
+	if (err) LOG_ERR("Error %s.", err < -1 ? "attaching callback functions" : "configuring pin interrupts");
 
 	/* Start indefinite timers */
 	k_timer_start(&heartbeat_timer, K_MSEC(HEARTBEAT_PERIOD/2), K_MSEC(HEARTBEAT_PERIOD/2));
 	k_timer_start(&action_timer, K_MSEC(aLEDs.delay), K_MSEC(aLEDs.delay));
 	
-	// Execute control logic
+	// Execute control logic indefinitely
 	while (1) {
 		k_msleep(10000);
 	}
