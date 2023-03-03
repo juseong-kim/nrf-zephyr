@@ -69,9 +69,9 @@ static int err;
 int check_devices_ready(void)
 {
 	// Check gpio0 interface
-	if (!device_is_ready(heartbeat_led.port)) return -2;
+	if (!device_is_ready(heartbeat_led.port)) return -1;
 	// Check gpio1 interface
-    if (!device_is_ready(error_led.port)) return -1;
+    if (!device_is_ready(error_led.port)) return -2;
 
 	return 0;
 }
@@ -243,7 +243,7 @@ void main(void)
 {
 	// Check that devices, pins, and callbacks are ready and configured
 	err = check_devices_ready();
-	if (err) LOG_ERR("GPIO%d interface not ready.", err < -1 ? 0 : 1);
+	if (err) LOG_ERR("GPIO%d interface not ready.", err < -1 ? 1 : 0);
 	err = configure_pins();
 	if (err) LOG_ERR("Error configuring %s pins.", err < -1 ? "input button" : "output LED");
 	err = setup_callbacks();
