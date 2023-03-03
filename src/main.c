@@ -221,7 +221,7 @@ void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 
 void toggle_heartbeat_led(struct k_timer *heartbeat_timer){
 	err = gpio_pin_toggle_dt(&heartbeat_led);
-	if (err) LOG_ERR("Error toggling hearbeat LED");
+	if (err) LOG_ERR("Error toggling heartbeat LED");
 }
 
 void set_action_leds(struct k_timer *action_timer){
