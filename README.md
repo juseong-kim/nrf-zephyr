@@ -1,13 +1,15 @@
-# Lab 07: Zephyr Devicetree, GPIO & Callbacks + Lab 08: Zephyr Timers
+# Lab 07: Zephyr Devicetree, GPIO & Callbacks + Lab 08: Zephyr Timers + Lab 09: Zephyr ADC
 BME590L Medical Electrical Equipment  
 Juseong (Joe) Kim
+Version: ADC
 
 ## Status
-Fully functional.  
-All four buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
+Voltage readings inaccurate.  
+Buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
 
 ## Remaining Questions
 1. Can callback functions and timer functions return an error code (int)?
+1. How to log float values?
 
 ## Lab 07 Questions
 ### What is the difference in configuring a GPIO LED pin to be GPIO ACTIVE LOW vs GPIO ACTIVE HIGH?
