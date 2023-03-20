@@ -1,23 +1,12 @@
-# nRF52833DK and Zephyr RTOS
+# Lab 07: Zephyr Devicetree, GPIO & Callbacks
 BME590L Medical Electrical Equipment  
-Juseong (Joe) Kim  
-Current Version: ADC
+Juseong (Joe) Kim
 
-## Status
-Voltage readings inaccurate.  
-Buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
+## Current status
+Fully functional, except the toggling of heartbeat LED at 1 Hz (*heartbeat_led* currently toggles with *alarm_led*; this is to be fixed with threads).  
+All four buttons are prone to switch bouncing (i.e. single press is registered as two presses).
 
-## Remaining Questions
-1. Can callback functions and timer functions return an error code (int)?
-1. How to log float values?
-
-## Lab 09: Zephyr ADC
-In progress.
-
-## Lab 08: Zephyr Timers
-Fully functional.
-
-## Lab 07: Zephyr Devicetree, GPIO & Callbacks
+## Part 4
 ### What is the difference in configuring a GPIO LED pin to be GPIO ACTIVE LOW vs GPIO ACTIVE HIGH?
 GPIO_ACTIVE_HIGH means that the LED is on when the pin is set to its high state, and off when the pin is in its low state.  
 The converse is true for GPIO_ACTIVE_LOW (LED on if pin low, off if pin high).
