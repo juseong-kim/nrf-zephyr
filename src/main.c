@@ -50,8 +50,8 @@ void restart_timer(struct k_timer *timer, int duration_ms);
 
 /* LEDs */
 static const struct gpio_dt_spec heartbeat_led = GPIO_DT_SPEC_GET(DT_ALIAS(heartbeat), gpios);
-static const struct gpio_dt_spec buzzer_led = GPIO_DT_SPEC_GET(DT_ALIAS(buzzer), gpios);
-static const struct gpio_dt_spec ivdrip_led = GPIO_DT_SPEC_GET(DT_ALIAS(ivdrip), gpios);
+static const struct gpio_dt_spec led_2 = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
+static const struct gpio_dt_spec led_3 = GPIO_DT_SPEC_GET(DT_ALIAS(led3), gpios);
 static const struct gpio_dt_spec error_led = GPIO_DT_SPEC_GET(DT_ALIAS(error), gpios);
 
 /* Buttons */
@@ -105,8 +105,8 @@ int configure_pins(void)
 {
 	// Output LED pins
 	err = gpio_pin_configure_dt(&heartbeat_led, GPIO_OUTPUT_LOW);
-	err += gpio_pin_configure_dt(&ivdrip_led, GPIO_OUTPUT_LOW);
-	err += gpio_pin_configure_dt(&buzzer_led, GPIO_OUTPUT_LOW);
+	err += gpio_pin_configure_dt(&led_3, GPIO_OUTPUT_LOW);
+	err += gpio_pin_configure_dt(&led_2, GPIO_OUTPUT_LOW);
 	if (err) return -1;
 
 	// Input button pins
@@ -117,8 +117,8 @@ int configure_pins(void)
 	if (err) return -2;
 
 	// ADC input pin
-	err = adc_channel_setup_dt(&led2.adc);
-	err +=  adc_channel_setup_dt(&led3.adc);
+	err = adc_channel_setup_dt(&(led2.adc));
+	err +=  adc_channel_setup_dt(&(led3.adc));
 	if (err) return -3;
 
 	return 0;
@@ -162,8 +162,8 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 		LOG_INF("Entering sleep state");
 		state = STATE_SLEEP;
 		// Sleep (turn all action LEDs off and stop timer to keep them off)
-		err = gpio_pin_set_dt(&buzzer_led, 0);
-		err += gpio_pin_set_dt(&ivdrip_led, 0);
+		err = gpio_pin_set_dt(&led_2, 0);
+		err += gpio_pin_set_dt(&led_3, 0);
 		if (err) {
 			LOG_ERR("Error turning off all action LEDs.");
 		}
@@ -197,6 +197,7 @@ void toggle_heartbeat_led(struct k_timer *heartbeat_timer){
 }
 
 float voltage_to_freq(int mV, struct vModLED led) {
+	mV = mV < 0 ? 0 : mV; // read negative voltages as 0 V
 	float slope = 1.0 * (led.freq_max - led.freq_min) / (mV_AIN_MAX - mV_AIN_MIN);
 	return led.freq_min + slope * (mV - mV_AIN_MIN);
 }
@@ -213,6 +214,8 @@ int read_adc(struct adc_dt_spec adc_channel) {
 	(void)adc_sequence_init_dt(&adc_channel, &sequence);
 
 	err = adc_read(adc_channel.dev, &sequence);
+	if (err < 0) LOG_ERR("Could not read(%d)", err);
+	else LOG_DBG("Raw ADC Buffer: %d", buf);
 
 	val_mv = buf;
 	err = adc_raw_to_millivolts_dt(&adc_channel, &val_mv);
@@ -228,15 +231,14 @@ int read_adc(struct adc_dt_spec adc_channel) {
 
 void update_led_freq(struct vModLED led){
 	led.freq = voltage_to_freq(read_adc(led.adc), led);
-	led.delay = (int)(1000.0 / led.freq);
+	led.delay = (int)(500.0 / led.freq);
 	if ((led.freq < led.freq_min || led.freq > led.freq_max) && state == STATE_DEFAULT) {
-		// TODO cannot log float values
-		LOG_ERR("LED%d frequency (%d Hz) out of range. Press reset button to resume operation.", led.num, (int)led.freq);
+		LOG_ERR("LED%d frequency (%f Hz) out of range. Press reset button to resume operation.", led.num, led.freq);
 		state = STATE_ERROR;
 		err = gpio_pin_set_dt(&error_led, 1);
 		if (err) LOG_ERR("Error setting error LED.");
-		err = gpio_pin_set_dt(&buzzer_led, 1);
-		err += gpio_pin_set_dt(&ivdrip_led, 1);
+		err = gpio_pin_set_dt(&led_2, 1);
+		err += gpio_pin_set_dt(&led_3, 1);
 		if (err) LOG_ERR("Error setting action LEDs.");
 
 		k_timer_stop(&read_adc_timer);
@@ -244,8 +246,8 @@ void update_led_freq(struct vModLED led){
 		if(led.num == 3) k_timer_stop(&led3_timer);
 	}
 	else if (state == STATE_DEFAULT) {
-		// Set buzzer LED toggling to new frequency
-		LOG_INF("LED%d\tf = %d Hz\t1/f = %d ms", led.num, (int)led.freq, led.delay);
+		// Set LED2 toggling to new frequency
+		LOG_INF("LED%d\tf = %f Hz\t1/f = %d ms\tdelay = %d ms", led.num, led.freq, led.delay*2, led.delay);
 		if(led.num == 2) restart_timer(&led2_timer, led.delay);
 		if(led.num == 3) restart_timer(&led3_timer, led.delay);
 	}
@@ -262,13 +264,13 @@ void update_leds_freq(struct k_timer *read_adc_timer){
 }
 
 void toggle_led2(struct k_timer *led2_timer){
-	err = gpio_pin_toggle_dt(&buzzer_led);
-	if (err) LOG_ERR("Error toggling buzzer LED.");
+	err = gpio_pin_toggle_dt(&led_2);
+	if (err) LOG_ERR("Error toggling LED2.");
 }
 
 void toggle_led3(struct k_timer *led3_timer){
-	err = gpio_pin_toggle_dt(&ivdrip_led);
-	if (err) LOG_ERR("Error toggling IV drip LED.");
+	err = gpio_pin_toggle_dt(&led_3);
+	if (err) LOG_ERR("Error toggling LED3.");
 }
 
 void restart_timer(struct k_timer *timer, int duration_ms){
@@ -288,7 +290,7 @@ void main(void)
 	if (err) LOG_ERR("Error %s.", err < -1 ? "attaching callback functions" : "configuring pin interrupts");
 
 	/* Start indefinite timers */
-	k_timer_start(&heartbeat_timer, K_MSEC(HEARTBEAT_PERIOD/2), K_MSEC(HEARTBEAT_PERIOD/2));
+	// k_timer_start(&heartbeat_timer, K_MSEC(HEARTBEAT_PERIOD/2), K_MSEC(HEARTBEAT_PERIOD/2));
 	k_timer_start(&read_adc_timer, K_MSEC(ADC_READ_PERIOD), K_MSEC(ADC_READ_PERIOD));
 
 	k_timer_start(&led2_timer, K_MSEC(led2.delay), K_MSEC(led2.delay));

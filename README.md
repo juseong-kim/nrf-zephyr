@@ -4,12 +4,12 @@ Juseong (Joe) Kim
 Current Version: ADC
 
 ## Status
-Voltage readings inaccurate.  
+AIN1 provides no voltage readings.
 Buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
 
 ## Remaining Questions
+1. How to handle negative voltage readings from ADC?
 1. Can callback functions and timer functions return an error code (int)?
-1. How to log float values?
 
 ## Lab 09: Zephyr ADC
 In progress.
