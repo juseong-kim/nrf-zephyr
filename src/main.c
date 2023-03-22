@@ -2,9 +2,10 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/adc.h>
+// #include <zephyr/drivers/pwm.h>
 
 /* Register logger */
-LOG_MODULE_REGISTER(ledControl, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(ledControl, LOG_LEVEL_INF);
 
 /* Function declarations */
 int check_devices_ready(void);
@@ -14,7 +15,7 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins);
 void toggle_heartbeat_led(struct k_timer *heartbeat_timer);
 int read_adc(struct adc_dt_spec adc_channel);
-void update_leds_freq(struct k_timer *read_adc_timer);
+void update_leds_freq(void);
 void toggle_led2(struct k_timer *led2_timer);
 void toggle_led3(struct k_timer *led3_timer);
 void restart_timer(struct k_timer *timer, int duration_ms);
@@ -48,6 +49,10 @@ void restart_timer(struct k_timer *timer, int duration_ms);
 #define FREQ_MIN2 5
 #define FREQ_MAX2 10
 
+/* PWM */
+// static const struct pwm_dt_spec pwm_led2 = PWM_DT_SPEC_GET(DT_ALIAS(pwm2));
+// static const struct pwm_dt_spec pwm_led3 = PWM_DT_SPEC_GET(DT_ALIAS(pwm3));
+
 /* LEDs */
 static const struct gpio_dt_spec heartbeat_led = GPIO_DT_SPEC_GET(DT_ALIAS(heartbeat), gpios);
 static const struct gpio_dt_spec led_2 = GPIO_DT_SPEC_GET(DT_ALIAS(led2), gpios);
@@ -79,7 +84,6 @@ float freq2, freq3;
 
 /* Timers */
 K_TIMER_DEFINE(heartbeat_timer, toggle_heartbeat_led, NULL);
-K_TIMER_DEFINE(read_adc_timer, update_leds_freq, NULL);
 K_TIMER_DEFINE(led2_timer, toggle_led2, NULL);
 K_TIMER_DEFINE(led3_timer, toggle_led3, NULL);
 
@@ -154,7 +158,6 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 		LOG_INF("Waking from sleep state");
 		state = STATE_DEFAULT;
 		// Resume with previous delay
-		k_timer_start(&read_adc_timer, K_MSEC(ADC_READ_PERIOD/2), K_MSEC(ADC_READ_PERIOD/2));
 		k_timer_start(&led2_timer, K_MSEC(led2.delay), K_MSEC(led2.delay));
 		k_timer_start(&led3_timer, K_MSEC(led3.delay), K_MSEC(led3.delay));
 	}
@@ -167,7 +170,6 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 		if (err) {
 			LOG_ERR("Error turning off all action LEDs.");
 		}
-		k_timer_stop(&read_adc_timer);
 		k_timer_stop(&led2_timer);
 		k_timer_stop(&led3_timer);
 	}
@@ -185,7 +187,6 @@ void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 	led2.delay = 1000 / led2.freq_min;
 	led3.delay= 1000 / led2.freq_min;
 
-	restart_timer(&read_adc_timer, ADC_READ_PERIOD);
 	restart_timer(&led2_timer, led2.delay);
 	restart_timer(&led3_timer, led3.delay);
 }
@@ -241,12 +242,11 @@ void update_led_freq(struct vModLED led){
 		err += gpio_pin_set_dt(&led_3, 1);
 		if (err) LOG_ERR("Error setting action LEDs.");
 
-		k_timer_stop(&read_adc_timer);
 		if(led.num == 2) k_timer_stop(&led2_timer);
 		if(led.num == 3) k_timer_stop(&led3_timer);
 	}
 	else if (state == STATE_DEFAULT) {
-		// Set LED2 toggling to new frequency
+		// Set LED toggling to new frequency
 		LOG_INF("LED%d\tf = %f Hz\t1/f = %d ms\tdelay = %d ms", led.num, led.freq, led.delay*2, led.delay);
 		if(led.num == 2) restart_timer(&led2_timer, led.delay);
 		if(led.num == 3) restart_timer(&led3_timer, led.delay);
@@ -256,7 +256,7 @@ void update_led_freq(struct vModLED led){
 	}
 }
 
-void update_leds_freq(struct k_timer *read_adc_timer){
+void update_leds_freq(void){
 	/* Update LED2 and LED3 frequencies */
 	LOG_INF("------------------------");
 	update_led_freq(led2);
@@ -290,14 +290,15 @@ void main(void)
 	if (err) LOG_ERR("Error %s.", err < -1 ? "attaching callback functions" : "configuring pin interrupts");
 
 	/* Start indefinite timers */
-	// k_timer_start(&heartbeat_timer, K_MSEC(HEARTBEAT_PERIOD/2), K_MSEC(HEARTBEAT_PERIOD/2));
-	k_timer_start(&read_adc_timer, K_MSEC(ADC_READ_PERIOD), K_MSEC(ADC_READ_PERIOD));
+	k_timer_start(&heartbeat_timer, K_MSEC(HEARTBEAT_PERIOD/2), K_MSEC(HEARTBEAT_PERIOD/2));
 
 	k_timer_start(&led2_timer, K_MSEC(led2.delay), K_MSEC(led2.delay));
 	k_timer_start(&led3_timer, K_MSEC(led3.delay), K_MSEC(led3.delay));
 	
-	// Execute control logic indefinitely
+	// Read from ADC every 3 seconds
 	while (1) {
-		k_msleep(10000);
+		// TODO consider reading ADC here instead of with timer
+		k_msleep(3000);
+		update_leds_freq();
 	}
 }

@@ -4,7 +4,7 @@ Juseong (Joe) Kim
 Current Version: ADC
 
 ## Status
-AIN1 provides no voltage readings.
+ADC Channel 1 uses ADC_REF_INTERNAL instead of ADC_REF_VDD_1_4.
 Buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
 
 ## Remaining Questions
@@ -12,7 +12,7 @@ Buttons are prone to switch bouncing (i.e. single press is registered as two pre
 1. Can callback functions and timer functions return an error code (int)?
 
 ## Lab 09: Zephyr ADC
-In progress.
+In progress (*see above*).
 
 ## Lab 08: Zephyr Timers
 Fully functional.
