@@ -30,7 +30,7 @@ void restart_timer(struct k_timer *timer, int duration_ms);
 
 /* Time intervals */
 #define HEARTBEAT_PERIOD 1000
-#define ADC_READ_PERIOD 4000
+#define ADC_READ_PERIOD 3000
 
 /* ADC macros */
 #define ADC_DT_SPEC_GET_BY_ALIAS(node_id){ 				\
@@ -74,8 +74,8 @@ struct vModLED {
 	short int freq_max;
 	const struct adc_dt_spec adc;
 };
-struct vModLED led2 = { 2, 1000/FREQ_MIN2, FREQ_MIN2, FREQ_MIN2, FREQ_MAX2, ADC_DT_SPEC_GET_BY_ALIAS(vled2) };
-struct vModLED led3 = { 3, 1000/FREQ_MIN3, FREQ_MIN3, FREQ_MIN3, FREQ_MAX3, ADC_DT_SPEC_GET_BY_ALIAS(vled3) };
+struct vModLED led2 = { 2, 500/FREQ_MIN2, FREQ_MIN2, FREQ_MIN2, FREQ_MAX2, ADC_DT_SPEC_GET_BY_ALIAS(vled2) };
+struct vModLED led3 = { 3, 500/FREQ_MIN3, FREQ_MIN3, FREQ_MIN3, FREQ_MAX3, ADC_DT_SPEC_GET_BY_ALIAS(vled3) };
 float voltage_to_freq(int mV, struct vModLED led);
 void update_led_freq(struct vModLED led);
 
@@ -184,8 +184,8 @@ void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 	gpio_pin_set_dt(&error_led, 0);
 
 	state = STATE_DEFAULT;
-	led2.delay = 1000 / led2.freq_min;
-	led3.delay= 1000 / led2.freq_min;
+	led2.delay = 500 / led2.freq_min;
+	led3.delay= 500 / led2.freq_min;
 
 	restart_timer(&led2_timer, led2.delay);
 	restart_timer(&led3_timer, led3.delay);
@@ -295,10 +295,9 @@ void main(void)
 	k_timer_start(&led2_timer, K_MSEC(led2.delay), K_MSEC(led2.delay));
 	k_timer_start(&led3_timer, K_MSEC(led3.delay), K_MSEC(led3.delay));
 	
-	// Read from ADC every 3 seconds
+	// Read from ADC and update blinking frequency of LEDs every 3 seconds
 	while (1) {
-		// TODO consider reading ADC here instead of with timer
-		k_msleep(3000);
+		k_msleep(ADC_READ_PERIOD);
 		update_leds_freq();
 	}
 }
