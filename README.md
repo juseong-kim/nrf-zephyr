@@ -4,15 +4,13 @@ Juseong (Joe) Kim
 Current Version: ADC
 
 ## Status
-ADC Channel 1 uses ADC_REF_INTERNAL instead of ADC_REF_VDD_1_4.
 Buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
 
 ## Remaining Questions
-1. How to handle negative voltage readings from ADC?
 1. Can callback functions and timer functions return an error code (int)?
 
 ## Lab 09: Zephyr ADC
-In progress (*see above*).
+Fully functional.
 
 ## Lab 08: Zephyr Timers
 Fully functional.
