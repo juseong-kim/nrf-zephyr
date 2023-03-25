@@ -2,7 +2,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/adc.h>
-#include <zephyr/drivers/pwm.h>
 
 /* Register logger */
 LOG_MODULE_REGISTER(ledControl, LOG_LEVEL_INF);
@@ -48,10 +47,6 @@ void restart_timer(struct k_timer *timer, int duration_ms);
 #define FREQ_MAX3 5
 #define FREQ_MIN2 5
 #define FREQ_MAX2 10
-
-/* PWM */
-static const struct pwm_dt_spec pwm_led2 = PWM_DT_SPEC_GET(DT_ALIAS(pwm2));
-static const struct pwm_dt_spec pwm_led3 = PWM_DT_SPEC_GET(DT_ALIAS(pwm3));
 
 /* LEDs */
 static const struct gpio_dt_spec heartbeat_led = GPIO_DT_SPEC_GET(DT_ALIAS(heartbeat), gpios);
@@ -101,8 +96,6 @@ int check_devices_ready(void)
     if (!device_is_ready(error_led.port)) return -2;
 	// Check ADC controller device
 	if (!device_is_ready(led2.adc.dev)) return -3;
-	// Check PWM
-	if (!device_is_ready(pwm_led2.dev)) return -4;
 
 	return 0;
 }
@@ -285,15 +278,11 @@ void main(void)
 {
 	// Check that devices, pins, and callbacks are ready and configured
 	err = check_devices_ready();
-	if (err) LOG_ERR("%s not ready.", err == -1 ? "GPIO0 interface" : err == -2 ? "GPIO1 interface" : err == -3 ? "ADC controller" : "PWM device"); // TODO consider adding dev name
+	if (err) LOG_ERR("%s not ready.", err == -1 ? "GPIO0 interface" : err == -2 ? "GPIO1 interface" : "ADC controller");
 	err = configure_pins();
 	if (err) LOG_ERR("Error configuring %s pins.", err == -1 ? "output LED" : err == -2 ? "input button" : "ADC input");
 	err = setup_callbacks();
 	if (err) LOG_ERR("Error %s.", err < -1 ? "attaching callback functions" : "configuring pin interrupts");
-	err = pwm_set_pulse_dt(pwm_led2, pwm_led2->period/2);
-	if (err) LOG_ERR("Error setting LED2 PWM (PWM0).");
-	err = pwm_set_pulse_dt(pwm_led3, pwm_led3->period/2);
-	if (err) LOG_ERR("Error setting LED3 PWM (PWM1).");
 
 	/* Start indefinite timers */
 	k_timer_start(&heartbeat_timer, K_MSEC(HEARTBEAT_PERIOD/2), K_MSEC(HEARTBEAT_PERIOD/2));
@@ -301,11 +290,9 @@ void main(void)
 	k_timer_start(&led2_timer, K_MSEC(led2.delay), K_MSEC(led2.delay));
 	k_timer_start(&led3_timer, K_MSEC(led3.delay), K_MSEC(led3.delay));
 	
-	// Read from ADC and update LEDs
+	// Read from ADC and update blinking frequency of LEDs every 3 seconds
 	while (1) {
 		k_msleep(ADC_READ_PERIOD);
-		// TODO add modulate LED3 brightness amplitude (constantly ON) with AIN0 voltage: linear
-		// TODO add modulate LED2 brightness frequency with AIN1 voltage: sawtooth (optionally sinusoidal)
 		update_leds_freq();
 	}
 }
