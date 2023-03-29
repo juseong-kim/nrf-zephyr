@@ -1,13 +1,18 @@
 # nRF52833DK and Zephyr RTOS
 BME590L Medical Electrical Equipment  
 Juseong (Joe) Kim  
-Current Version: ADC
+Current Version: PWM
 
 ## Status
+PWM version implemented.  
+Sinusoidal modulation of LED2 to be implemented.  
 Buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
 
 ## Remaining Questions
 1. Can callback functions and timer functions return an error code (int)?
+
+## Lab 10: Zephyr PWM
+Fully implemented.
 
 ## Lab 09: Zephyr ADC
 Fully functional.
