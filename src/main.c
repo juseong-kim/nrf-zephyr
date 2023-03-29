@@ -17,7 +17,7 @@ void toggle_heartbeat_led(struct k_timer *heartbeat_timer);
 int read_adc(struct adc_dt_spec adc_channel);
 void update_leds_freq(void);
 void control_led2(struct k_timer *led2_timer);
-void restart_timer(struct k_timer *timer, int duration_ms);
+void restart_timer(struct k_timer *timer, int duration_us);
 
 /* No code statement */
 #define noop
@@ -28,8 +28,8 @@ void restart_timer(struct k_timer *timer, int duration_ms);
 #define STATE_SLEEP 1
 
 /* Time intervals */
-#define HEARTBEAT_PERIOD 1000
-#define ADC_READ_PERIOD 1000
+#define HEARTBEAT_PERIOD 1000000 // us
+#define ADC_READ_PERIOD 1000 // ms
 
 /* ADC macros */
 #define ADC_DT_SPEC_GET_BY_ALIAS(node_id){ 				\
@@ -43,10 +43,10 @@ void restart_timer(struct k_timer *timer, int duration_ms);
 
 #define mV_AIN_MIN 0
 #define mV_AIN_MAX 3300
-#define FREQ_MIN3 1
-#define FREQ_MAX3 5
-#define FREQ_MIN2 5
-#define FREQ_MAX2 10
+#define FREQ_MIN3 1 // Hz
+#define FREQ_MAX3 5 // Hz
+#define FREQ_MIN2 5 // Hz
+#define FREQ_MAX2 10 // Hz
 
 /* PWM */
 static const struct pwm_dt_spec pwm_led2 = PWM_DT_SPEC_GET(DT_ALIAS(pwm2));
@@ -66,7 +66,8 @@ static const struct gpio_dt_spec reset = GPIO_DT_SPEC_GET(DT_ALIAS(button3), gpi
 
 /* LED Duty Cycle Steps */
 static int cnt = 0;
-static int duty_cycle[10] = {100, 80, 60, 40, 20, 0, 20, 40, 60, 80};
+// static int duty_cycle[10] = {100, 80, 60, 40, 20, 0, 20, 40, 60, 80};
+static float sine[40] = {50.0, 57.82172, 65.45085, 72.69952, 79.38926, 85.35534, 90.45085, 94.55033, 97.55283, 99.38442, 100.0, 99.38442, 97.55283, 94.55033, 90.45085, 85.35534, 79.38926, 72.69952, 65.45085, 57.82172, 50.0, 42.17828, 34.54915, 27.30048, 20.61074, 14.64466, 9.54915, 5.44967, 2.44717, 0.61558, 0.0, 0.61558, 2.44717, 5.44967, 9.54915, 14.64466, 20.61074, 27.30048, 34.54915, 42.17828};
 
 /* Timers */
 K_TIMER_DEFINE(heartbeat_timer, toggle_heartbeat_led, NULL);
@@ -82,8 +83,8 @@ struct vModLED { // TODO update struct to include timer objects
 	const struct adc_dt_spec adc;
 	struct k_timer *timer;
 };
-struct vModLED led2 = { 2, 500/FREQ_MIN2, FREQ_MIN2, FREQ_MIN2, FREQ_MAX2, ADC_DT_SPEC_GET_BY_ALIAS(vled2), &led2_timer };
-struct vModLED led3 = { 3, 500/FREQ_MIN3, FREQ_MIN3, FREQ_MIN3, FREQ_MAX3, ADC_DT_SPEC_GET_BY_ALIAS(vled3) };
+struct vModLED led2 = { 2, 500000/FREQ_MIN2, FREQ_MIN2, FREQ_MIN2, FREQ_MAX2, ADC_DT_SPEC_GET_BY_ALIAS(vled2), &led2_timer };
+struct vModLED led3 = { 3, 500000/FREQ_MIN3, FREQ_MIN3, FREQ_MIN3, FREQ_MAX3, ADC_DT_SPEC_GET_BY_ALIAS(vled3) };
 float voltage_to_freq(int mV, struct vModLED led);
 
 /* Initialize state */
@@ -159,14 +160,14 @@ void on_sleep(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 		LOG_INF("Waking from sleep state");
 		state = STATE_DEFAULT;
 		// Resume with previous delay
-		k_timer_start(&led2_timer, K_MSEC(led2.delay), K_MSEC(led2.delay));
+		k_timer_start(&led2_timer, K_USEC(led2.delay), K_USEC(led2.delay));
 	}
 	else if (state == STATE_DEFAULT) {
 		LOG_INF("Entering sleep state");
 		state = STATE_SLEEP;
 		// Sleep (turn all action LEDs off and stop timer to keep them off)
-		err = pwm_set_pulse_dt(&pwm_led2, pwm_led2.period);
-		err += pwm_set_pulse_dt(&pwm_led3, pwm_led3.period);
+		err = pwm_set_pulse_dt(&pwm_led2, 0);
+		err += pwm_set_pulse_dt(&pwm_led3, 0);
 		if (err) {
 			LOG_ERR("Error turning off all action LEDs.");
 		}
@@ -183,7 +184,7 @@ void on_reset(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 	gpio_pin_set_dt(&error_led, 0);
 
 	state = STATE_DEFAULT;
-	led2.delay = 100 / led2.freq_min;
+	led2.delay = 1000000 / 40 / led2.freq_min;
 	restart_timer(&led2_timer, led2.delay);
 }
 
@@ -229,8 +230,8 @@ int read_adc(struct adc_dt_spec adc_channel) {
 void modulate_led_brightness(struct vModLED led){
 	int mV = read_adc(led.adc);
 	if (state == STATE_DEFAULT) {
-		uint32_t pulsewidth = pwm_led3.period * (1 - mV / 3300.0);
-		LOG_INF("LED%d   Pulse: %d ns = %.2f%%", led.num, pulsewidth, (1 - mV / 3300.0) * 100);
+		uint32_t pulsewidth = pwm_led3.period * (mV / 3300.0);
+		LOG_INF("LED%d   Pulse: %d ns = %.2f%%", led.num, pulsewidth, (mV / 3300.0) * 100);
 		err = pwm_set_pulse_dt(&pwm_led3, pulsewidth);
 		if (err) LOG_ERR("Error updating LED3 duty cycle (PWM0).");
 	}
@@ -242,7 +243,7 @@ void modulate_led_brightness(struct vModLED led){
 void modulate_led_frequency(struct vModLED led){
 	int mV = read_adc(led.adc);
 	led.freq = voltage_to_freq(mV, led);
-	led.delay = (int)(100.0 / led.freq);
+	led.delay = (int)(1000000.0 / 40 / led.freq);
 	if ((led.freq < led.freq_min || led.freq > led.freq_max) && state == STATE_DEFAULT) {
 		LOG_ERR("LED%d frequency (%f Hz) out of range. Press reset button to resume operation.", led.num, led.freq);
 		state = STATE_ERROR;
@@ -254,7 +255,7 @@ void modulate_led_frequency(struct vModLED led){
 		k_timer_stop(led.timer);
 	}
 	else if (state == STATE_DEFAULT) {
-		LOG_INF("LED%d   f = %f Hz\tdelay = %d ms", led.num, led.freq, led.delay);
+		LOG_INF("LED%d   f = %f Hz\tdelay = %d us", led.num, led.freq, led.delay);
 		restart_timer(led.timer, led.delay);
 	}
 	else { // Do nothing in error or sleep state
@@ -264,18 +265,18 @@ void modulate_led_frequency(struct vModLED led){
 
 void control_led2(struct k_timer *led2_timer){
 	// cycle through
-	uint32_t pulsewidth = pwm_led2.period * (duty_cycle[cnt] / 100.0);
+	uint32_t pulsewidth = pwm_led2.period * (sine[cnt] / 100.0);
 	err = pwm_set_pulse_dt(&pwm_led2, pulsewidth);
 	LOG_DBG("LED2 Pulse Width = %d", pulsewidth);
 	if (err) LOG_ERR("Error updating LED2 duty cycle (PWM0).");
 	cnt += 1;
-	if(cnt == 10) cnt = 0;
+	if(cnt == 40) cnt = 0;
 }
 
-void restart_timer(struct k_timer *timer, int duration_ms){
+void restart_timer(struct k_timer *timer, int duration_us){
 	/* Stop current timer and restart with new duration */
 	k_timer_stop(timer);
-	k_timer_start(timer, K_MSEC(duration_ms), K_MSEC(duration_ms));
+	k_timer_start(timer, K_USEC(duration_us), K_USEC(duration_us));
 }
 
 void main(void)
@@ -295,15 +296,15 @@ void main(void)
 	if (err) LOG_ERR("Error setting LED3 PWM (PWM1).");
 
 	/* Start indefinite timers */
-	k_timer_start(&heartbeat_timer, K_MSEC(HEARTBEAT_PERIOD/2), K_MSEC(HEARTBEAT_PERIOD/2));
-	k_timer_start(&led2_timer, K_MSEC(led3.delay), K_MSEC(led3.delay));
+	k_timer_start(&heartbeat_timer, K_USEC(HEARTBEAT_PERIOD/2), K_USEC(HEARTBEAT_PERIOD/2));
+	k_timer_start(&led2_timer, K_USEC(led3.delay), K_USEC(led3.delay));
 	
 	/* Read from ADC and update LEDs */
 	while (1) {
 		k_msleep(ADC_READ_PERIOD);
 		if (state == STATE_DEFAULT) {
 			LOG_INF("-------------");
-			modulate_led_frequency(led2); // modulate LED2 brightness frequency with AIN1 voltage: sawtooth (optionally sinusoidal)
+			modulate_led_frequency(led2); // modulate LED2 brightness frequency with AIN1 voltage: sinusoidal
 			modulate_led_brightness(led3); // modulate LED3 brightness amplitude (constantly ON) with AIN0 voltage: linear
 		}
 		else {
