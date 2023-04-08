@@ -4,14 +4,11 @@ Juseong (Joe) Kim
 Current Version: PWM
 
 ## Status
-Final project in progress.  
+PWM version fully functional.  
 Buttons are prone to switch bouncing (i.e. single press is registered as two presses).  
 
 ## Remaining Questions
 1. Can callback functions and timer functions return an error code (int)?
-
-## Final Project
-In progress.
 
 ## Lab 10: Zephyr PWM
 Fully functional.
