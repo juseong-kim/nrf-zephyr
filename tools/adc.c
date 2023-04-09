@@ -2,16 +2,6 @@
 #include <zephyr/logging/log.h>
 LOG_MODULE_REGISTER(adc, LOG_LEVEL_DBG);
 
-/* ADC macros */
-#define ADC_DT_SPEC_GET_BY_ALIAS(node_id){ 				\
-	.dev = DEVICE_DT_GET(DT_PARENT(DT_ALIAS(node_id))),	\
-	.channel_id = DT_REG_ADDR(DT_ALIAS(node_id)),		\
-	ADC_CHANNEL_CFG_FROM_DT_NODE(DT_ALIAS(node_id))		\
-} \
-
-#define DT_SPEC_AND_COMMA(node_id, prop, idx)			\
-	ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
-
 /* Functions */
 int read_adc(struct adc_dt_spec adc_channel) {
 	int16_t buf;
