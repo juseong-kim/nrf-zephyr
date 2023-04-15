@@ -43,19 +43,19 @@ void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2,
 /* Callbacks */
 void on_save(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    extern int state;
     if (state == STATE_DEFAULT)
     {
-        noop // save 5 data points for each input signal of RMS energy calculated each second
+        noop; // save 5 data points for each input signal of RMS energy calculated each second
     }
 }
 
 void on_bt_send(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
-    extern int state;
     if (state == STATE_DEFAULT)
     {
-        noop // send the two, 5-point data arrays to phone via Bluetooth
+        noop; // send the two, 5-point data arrays to phone via Bluetooth
+        LOG_INF("Sending arrays to phone via Bluetooth");
+
     }
 }
 

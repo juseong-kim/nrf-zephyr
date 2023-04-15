@@ -10,6 +10,7 @@
 #define noop
 #define STATE_DEFAULT 0
 #define STATE_VBUS_DETECTED -1
+extern int state;
 
 /* Functions */
 void check_devices_ready(struct gpio_dt_spec led, struct adc_dt_spec adc, struct pwm_dt_spec pwm);

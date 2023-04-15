@@ -8,6 +8,7 @@
 
 #include "../tools/setup.h"
 #include "../tools/adc.h"
+#include "../tools/bt.h"
 
 /* Logger */
 LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
@@ -50,9 +51,60 @@ const struct gpio_dt_spec btn_bt = GPIO_DT_SPEC_GET(DT_ALIAS(btnbt), gpios);
 const struct adc_dt_spec adc1 = ADC_DT_SPEC_GET_BY_ALIAS(adc_1);
 const struct adc_dt_spec adc2 = ADC_DT_SPEC_GET_BY_ALIAS(adc_2);
 
+/* BLE */
+static struct bt_conn *current_conn;
+void on_connected(struct bt_conn *conn, uint8_t ret);
+void on_disconnected(struct bt_conn *conn, uint8_t reason);
+void on_notif_changed(enum bt_data_notifications_enabled status);
+void on_data_rx(struct bt_conn *conn, const uint8_t *const data, uint16_t len);
+struct bt_conn_cb bluetooth_callbacks = {
+	.connected = on_connected,
+	.disconnected = on_disconnected,
+};
+
+struct bt_remote_srv_cb remote_service_callbacks = {
+	.notif_changed = on_notif_changed,
+	.data_rx = on_data_rx,
+};
+
+// BLE Callbacks
+void on_data_rx(struct bt_conn *conn, const uint8_t *const data, uint16_t len)
+{
+	// manually append NULL character at the end
+	uint8_t temp_str[len + 1];
+	memcpy(temp_str, data, len);
+	temp_str[len] = 0x00;
+
+	LOG_INF("BT received data on conn %p. Len: %d", (void *)conn, len);
+	LOG_INF("Data: %s", temp_str);
+}
+
+void on_connected(struct bt_conn *conn, uint8_t ret)
+{
+	if (ret) LOG_ERR("Connection error: %d", ret);
+	LOG_INF("BT connected");
+	current_conn = bt_conn_ref(conn);
+}
+
+void on_disconnected(struct bt_conn *conn, uint8_t reason)
+{
+	LOG_INF("BT disconnected (reason: %d)", reason);
+	if (current_conn)
+	{
+		bt_conn_unref(current_conn);
+		current_conn = NULL;
+	}
+}
+
+void on_notif_changed(enum bt_data_notifications_enabled status)
+{
+	if (status == BT_DATA_NOTIFICATIONS_ENABLED) LOG_INF("BT notifications enabled");
+	else LOG_INF("BT notifications disabled");
+}
+
 /* Voltages */
-int vq[10] = {0}; // index via vq[(i1+i) % 10]
-int i1 = 0;
+static uint8_t vq[10] = {0}; // index via vq[(i1+i) % 10]
+static int i1 = 0;
 
 void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm){
 	int mV = read_adc(adc);
@@ -73,6 +125,8 @@ void main(void)
 	check_devices_ready(led1, adc1, pwm1);
 	configure_pins(led1, led2, btn_save, btn_bt, adc1, adc2);
 	setup_callbacks(btn_save, btn_bt);
+	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
+	if (err) LOG_ERR("BT init failed (err = %d)", err);
 	while (1)
 	{
 		// if (!usbc_vbus_check_level(DT_ALIAS(usbd), 1)){
@@ -82,6 +136,10 @@ void main(void)
 		if (state == STATE_DEFAULT){
 			modulate_led_brightness(adc1, pwm1);
 			modulate_led_brightness(adc2, pwm2);
+			set_data(vq);
+			err = send_data_notification(current_conn, vq, 1);
+			if (err) LOG_ERR("Could not send BT notification (err: %d)", err);
+			else LOG_INF("BT data transmitted.");
 		}
 	}
 }
