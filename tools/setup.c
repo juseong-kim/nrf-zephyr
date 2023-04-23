@@ -1,4 +1,6 @@
 #include "setup.h"
+#include "bt.h"
+#include "rms.h"
 
 /* Logger */
 LOG_MODULE_REGISTER(setup, LOG_LEVEL_DBG);
@@ -41,11 +43,14 @@ void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2,
 }
 
 /* Callbacks */
+static const uint8_t SAMPLE_DATA[N_BLE] = {0x1a, 0x2a, 0x3a, 0x4a, 0x5a, 0x1f, 0x2f, 0x3f, 0x4f, 0x5f};
 void on_save(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     if (state == STATE_DEFAULT)
     {
-        noop; // save 5 data points for each input signal of RMS energy calculated each second
+        calculate_rms();
+        set_data(vble);
+        // set_data(SAMPLE_DATA);
     }
 }
 
@@ -53,15 +58,17 @@ void on_bt_send(const struct device *dev, struct gpio_callback *cb, uint32_t pin
 {
     if (state == STATE_DEFAULT)
     {
-        noop; // send the two, 5-point data arrays to phone via Bluetooth
+        // int idx; // send the two, 5-point data arrays to phone via Bluetooth
         LOG_INF("Sending arrays to phone via Bluetooth");
 
+        err = send_data_notification(current_conn, N_BLE);
+        if (err)
+            LOG_ERR("Could not send BT notification (err: %d)", err);
     }
 }
 
 void setup_callbacks(struct gpio_dt_spec btn1, struct gpio_dt_spec btn2)
 {
-    int err;
     /* Define variables of type static struct gpio_callback */
     static struct gpio_callback save_cb;
     static struct gpio_callback bt_cb;

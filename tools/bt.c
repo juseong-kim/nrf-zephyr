@@ -1,4 +1,5 @@
 #include "bt.h"
+#include "macros.h"
 
 LOG_MODULE_REGISTER(bt, LOG_LEVEL_DBG);
 
@@ -6,9 +7,7 @@ static K_SEM_DEFINE(bt_init_ok, 1, 1);
 
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
-#define BLE_DATA_POINTS 10
-static uint8_t data[BLE_DATA_POINTS] = {0};
-
+static uint8_t data[N_BLE] = {0};
 static struct bt_remote_srv_cb remote_service_callbacks;
 enum bt_data_notifications_enabled notifications_enabled;
 
@@ -78,7 +77,7 @@ void bt_ready(int ret)
     k_sem_give(&bt_init_ok);
 }
 
-int send_data_notification(struct bt_conn *conn, uint8_t *value, uint16_t length)
+int send_data_notification(struct bt_conn *conn, uint16_t length)
 {
     int ret = 0;
 
@@ -86,7 +85,7 @@ int send_data_notification(struct bt_conn *conn, uint8_t *value, uint16_t length
     const struct bt_gatt_attr *attr = &remote_srv.attrs[2];
 
     params.attr = attr;
-    params.data = &value;
+    params.data = &data;
     params.len = length;
     params.func = on_sent;
 
@@ -98,7 +97,7 @@ int send_data_notification(struct bt_conn *conn, uint8_t *value, uint16_t length
 void set_data(uint8_t *data_in)
 {
     memcpy(data, data_in, sizeof(data));
-    LOG_DBG("Compliance data set via memcpy (size = %d).", sizeof(data));
+    LOG_DBG("Data set via memcpy (size = %d).", sizeof(data));
 }
 
 int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)

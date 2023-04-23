@@ -1,7 +1,7 @@
 # nRF52833DK and Zephyr RTOS
 BME590L Medical Electrical Equipment  
 Juseong (Joe) Kim  
-Current Version: PWM
+Current Version: Final Project
 
 ## Status
 Final project in progress.  
@@ -9,6 +9,8 @@ Buttons are prone to switch bouncing (i.e. single press is registered as two pre
 
 ## Remaining Questions
 1. Can callback functions and timer functions return an error code (int)?
+1. How can ADC parameters (gain, Vref, bit depth) be tuned to the expected input voltage amplitudes?
+1. For the RMS energy data arrays, are 9 bits required to sufficiently capture the full amplitude of the input signal (300 mV)?
 
 ## Final Project
 In progress.

@@ -5,12 +5,14 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/pwm.h>
+#include "macros.h"
 
 /* States */
-#define noop
-#define STATE_DEFAULT 0
-#define STATE_VBUS_DETECTED -1
 extern int state;
+extern int err;
+extern uint8_t vble[N_BLE];
+extern long long int sqsum[N_BLE];
+extern struct bt_conn *current_conn;
 
 /* Functions */
 void check_devices_ready(struct gpio_dt_spec led, struct adc_dt_spec adc, struct pwm_dt_spec pwm);

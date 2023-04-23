@@ -5,22 +5,46 @@
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/drivers/usb_c/usbc_vbus.h>
 #include <stdlib.h>
+#include <nrfx_power.h>
 
+#include "../tools/macros.h"
 #include "../tools/setup.h"
 #include "../tools/adc.h"
 #include "../tools/bt.h"
+#include "../tools/rms.h"
 
 /* Logger */
-LOG_MODULE_REGISTER(main, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 
 /* States */
-#define STATE_DEFAULT 0
-#define STATE_VBUS_DETECTED -1
 int state = STATE_DEFAULT;
 
+/* Voltages */
+uint8_t vq1[N_VOLTAGE] = {0}; // index via vble[(i1+i) % 10]
+uint8_t vq2[N_VOLTAGE] = {0};
+uint8_t vble[N_BLE] = {0};
+int i1_1 = 0;
+int i1_2 = 0;
+long long int sqsum[N_BLE] = {0};
+
 /* Miscellaneous */
-#define noop
 int err;
+
+/* VBUS */
+int check_vbus(void);
+int check_vbus(void) {
+	bool usbregstatus = nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
+	if (usbregstatus) {
+		LOG_ERR("VBUS voltage detected. Device cannot be operated while charging.");
+		state = STATE_VBUS_DETECTED;
+		return -1;
+	}
+	else {
+		LOG_DBG("VBUS voltage checked and not detected.");
+		state = STATE_DEFAULT;
+	}
+	return 0;
+}
 
 /* ADC macros */
 #define ADC_DT_SPEC_GET_BY_ALIAS(node_id)                   \
@@ -32,8 +56,6 @@ int err;
 
 #define DT_SPEC_AND_COMMA(node_id, prop, idx) \
 	ADC_DT_SPEC_GET_BY_IDX(node_id, idx),
-
-#define PERIOD_ADC_READ 500
 
 /* PWM */
 const struct pwm_dt_spec pwm1 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_1));
@@ -52,7 +74,7 @@ const struct adc_dt_spec adc1 = ADC_DT_SPEC_GET_BY_ALIAS(adc_1);
 const struct adc_dt_spec adc2 = ADC_DT_SPEC_GET_BY_ALIAS(adc_2);
 
 /* BLE */
-static struct bt_conn *current_conn;
+struct bt_conn *current_conn;
 void on_connected(struct bt_conn *conn, uint8_t ret);
 void on_disconnected(struct bt_conn *conn, uint8_t reason);
 void on_notif_changed(enum bt_data_notifications_enabled status);
@@ -102,16 +124,13 @@ void on_notif_changed(enum bt_data_notifications_enabled status)
 	else LOG_INF("BT notifications disabled");
 }
 
-/* Voltages */
-static uint8_t vq[10] = {0}; // index via vq[(i1+i) % 10]
-static int i1 = 0;
-
-void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm){
+void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int led)
+{
 	int mV = read_adc(adc);
 	if (state == STATE_DEFAULT){
-		// TODO update pulsewidth to RMS Voltage
-		uint32_t pulsewidth = pwm.period * (mV / 3300.0); 
-		LOG_INF("Pulse: %d", pulsewidth);
+		add_v(led, mV);
+		uint32_t pulsewidth = pwm.period * (vble[T_DATA_S-1] / 3300.0);
+		// LOG_DBG("LED%d RMS = %d", led, vble[T_DATA_S - 1]);
 		err = pwm_set_pulse_dt(&pwm, pulsewidth);
 		if(err) LOG_ERR("Error updating duty cycle of PWM channel %d", pwm.channel);
 	}
@@ -127,19 +146,18 @@ void main(void)
 	setup_callbacks(btn_save, btn_bt);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
+	// int limit = 0;
 	while (1)
 	{
 		// if (!usbc_vbus_check_level(DT_ALIAS(usbd), 1)){
 		// 	LOG_DBG("NOT above 1");
 		// }
-		k_msleep(PERIOD_ADC_READ);
+		k_msleep(T_ADC_READ);
 		if (state == STATE_DEFAULT){
-			modulate_led_brightness(adc1, pwm1);
-			modulate_led_brightness(adc2, pwm2);
-			set_data(vq);
-			err = send_data_notification(current_conn, vq, 1);
-			if (err) LOG_ERR("Could not send BT notification (err: %d)", err);
-			else LOG_INF("BT data transmitted.");
+			modulate_led_brightness(adc1, pwm1, 1);
+			modulate_led_brightness(adc2, pwm2, 2);
 		}
+		check_vbus();
+		// limit++;
 	}
 }

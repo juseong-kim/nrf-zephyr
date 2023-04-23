@@ -50,7 +50,7 @@ void bluetooth_set_battery_level(int level, int nominal_batt_mv);
 uint8_t bluetooth_get_battery_level(void);
 void on_sent(struct bt_conn *conn, void *user_data);
 void bt_ready(int ret);
-int send_data_notification(struct bt_conn *conn, uint8_t *value, uint16_t length);
+int send_data_notification(struct bt_conn *conn, uint16_t length);
 void set_data(uint8_t *data_in);
 int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb);
 

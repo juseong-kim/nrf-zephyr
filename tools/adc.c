@@ -1,6 +1,6 @@
 #include <zephyr/drivers/adc.h>
 #include <zephyr/logging/log.h>
-LOG_MODULE_REGISTER(adc, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(adc, LOG_LEVEL_INF);
 
 /* Functions */
 int read_adc(struct adc_dt_spec adc_channel) {
@@ -25,7 +25,7 @@ int read_adc(struct adc_dt_spec adc_channel) {
 		return buf;
 	}
 	else {
-		LOG_INF("%s (channel %d)\t%d mV", adc_channel.dev->name, adc_channel.channel_id, val_mv);
+		LOG_DBG("%s (channel %d)\t%d mV", adc_channel.dev->name, adc_channel.channel_id, val_mv);
 		return val_mv;
 	}
 }

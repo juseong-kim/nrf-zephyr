@@ -63,7 +63,7 @@
     adc0: channel@0 {
         reg = <0>; // channel number
         zephyr,reference = "ADC_REF_INTERNAL";
-        zephyr,gain = "ADC_GAIN_32";
+        zephyr,gain = "ADC_GAIN_1_5";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
         zephyr,input-positive = <NRF_SAADC_AIN1>; // P0.03
         zephyr,input-negative = <NRF_SAADC_AIN2>; // P0.04
@@ -72,7 +72,7 @@
     adc1: channel@1 {
         reg = <1>; // channel number
         zephyr,reference = "ADC_REF_INTERNAL";
-        zephyr,gain = "ADC_GAIN_8";
+        zephyr,gain = "ADC_GAIN_1_5";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
         zephyr,input-positive = <NRF_SAADC_AIN6>; // P0.30
         zephyr,input-negative = <NRF_SAADC_AIN7>; // P0.31
