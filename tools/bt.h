@@ -12,6 +12,8 @@
 #include <zephyr/settings/settings.h>
 #include <zephyr/bluetooth/services/bas.h>
 
+#include "adc.h"
+
 /* UUID of the Remote Service */
 // Project ID: 0x0000 (3rd entry)
 // MFG ID = 0x090e (4th entry)
@@ -53,5 +55,10 @@ void bt_ready(int ret);
 int send_data_notification(struct bt_conn *conn, uint16_t length);
 void set_data(uint8_t *data_in);
 int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb);
+
+/* Battery */
+void check_battery_level(struct k_timer *timer);
+uint8_t bluetooth_get_battery_level(void);
+void bluetooth_set_battery_level(int level, int nominal_batt_level);
 
 #endif

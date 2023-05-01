@@ -3,7 +3,7 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/drivers/pwm.h>
-#include <zephyr/drivers/usb_c/usbc_vbus.h>
+// #include <zephyr/drivers/usb_c/usbc_vbus.h>
 #include <stdlib.h>
 #include <nrfx_power.h>
 
@@ -29,6 +29,9 @@ long long int sqsum[N_BLE] = {0};
 
 /* Miscellaneous */
 int err;
+
+/* Battery Level */
+K_TIMER_DEFINE(battery_check_timer, check_battery_level, NULL);
 
 /* VBUS */
 int check_vbus(void);
@@ -72,6 +75,7 @@ const struct gpio_dt_spec btn_bt = GPIO_DT_SPEC_GET(DT_ALIAS(btnbt), gpios);
 /* ADCs */
 const struct adc_dt_spec adc1 = ADC_DT_SPEC_GET_BY_ALIAS(adc_1);
 const struct adc_dt_spec adc2 = ADC_DT_SPEC_GET_BY_ALIAS(adc_2);
+const struct adc_dt_spec adc_bat = ADC_DT_SPEC_GET_BY_ALIAS(adc_3);
 
 /* BLE */
 struct bt_conn *current_conn;
@@ -141,12 +145,14 @@ void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int
 
 void main(void)
 {
-	check_devices_ready(led1, adc1, pwm1);
-	configure_pins(led1, led2, btn_save, btn_bt, adc1, adc2);
+	check_devices_ready(led1, pwm1, adc1, adc2, adc_bat);
+	configure_pins(led1, led2, btn_save, btn_bt, adc1, adc2, adc_bat);
 	setup_callbacks(btn_save, btn_bt);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
 	// int limit = 0;
+	k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S));
+	
 	while (1)
 	{
 		// if (!usbc_vbus_check_level(DT_ALIAS(usbd), 1)){
@@ -154,10 +160,13 @@ void main(void)
 		// }
 		k_msleep(T_ADC_READ);
 		if (state == STATE_DEFAULT){
+			// TODO: implement below in timer
 			modulate_led_brightness(adc1, pwm1, 1);
 			modulate_led_brightness(adc2, pwm2, 2);
 		}
+		// TODO implement below in timer
 		check_vbus();
+		// TODO add blinking LED3 if VBUS detected
 		// limit++;
 	}
 }

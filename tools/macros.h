@@ -12,6 +12,9 @@
 
 #define N_BLE 10
 
+#define T_BAT_CHECK_S 10
+#define NOMINAL_BATT_MV 3300
+
 #define noop
 
 #endif

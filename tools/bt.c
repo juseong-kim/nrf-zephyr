@@ -135,3 +135,34 @@ int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)
 
     return ret;
 }
+
+/* Battery */
+extern struct adc_dt_spec adc_bat;
+
+void check_battery_level(struct k_timer *timer)
+{ // TODO
+    // Bluetooth set battery level
+    bluetooth_set_battery_level(read_adc(adc_bat), NOMINAL_BATT_MV);
+    // uint8_t battery_level = bluetooth_get_battery_level();
+    // set battery indicators (LEDs)
+}
+
+uint8_t bluetooth_get_battery_level(void){
+    uint8_t battery_level;
+
+    battery_level = bt_bas_get_battery_level();
+    LOG_INF("Battery: %d%%", battery_level);
+    
+    return battery_level;
+}
+
+void bluetooth_set_battery_level(int level, int nominal_batt_level){
+    LOG_DBG("Battery Voltage: %d", level);
+
+    float normalized_level = (float)level * 100.0 / nominal_batt_level;
+
+    LOG_INF("Battery Percentage: %.3f %%", normalized_level);
+
+    int err = bt_bas_set_battery_level((int)normalized_level);
+    if (err) LOG_ERR("BAS set error (err = %d)", err);
+}

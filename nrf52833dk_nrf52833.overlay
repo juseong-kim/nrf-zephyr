@@ -9,6 +9,7 @@
         pwm-2 = &pwm_led2;
         adc-1 = &adc0;
         adc-2 = &adc1;
+        adc-3 = &adc2;
     };
 
     pwm_leds {
@@ -52,7 +53,7 @@
     };
 
     zephyr,user {
-        io-channels = <&adc 0>, <&adc 1>;
+        io-channels = <&adc 0>, <&adc 1>, <&adc 2>;
     };
 };
 
@@ -62,20 +63,30 @@
 
     adc0: channel@0 {
         reg = <0>; // channel number
-        zephyr,reference = "ADC_REF_INTERNAL";
-        zephyr,gain = "ADC_GAIN_1_5";
+        zephyr,reference = "ADC_REF_VDD_1_4";
+        zephyr,vref-mv = < 100 >;
+        zephyr,gain = "ADC_GAIN_1";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
         zephyr,input-positive = <NRF_SAADC_AIN1>; // P0.03
         zephyr,input-negative = <NRF_SAADC_AIN2>; // P0.04
         zephyr,resolution = <8>;
     };
     adc1: channel@1 {
-        reg = <1>; // channel number
-        zephyr,reference = "ADC_REF_INTERNAL";
-        zephyr,gain = "ADC_GAIN_1_5";
+        reg = <1>;        // channel number
+        zephyr,reference = "ADC_REF_VDD_1_4";
+        zephyr,vref-mv = <300>;
+        zephyr,gain = "ADC_GAIN_1";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
         zephyr,input-positive = <NRF_SAADC_AIN6>; // P0.30
         zephyr,input-negative = <NRF_SAADC_AIN7>; // P0.31
+        zephyr,resolution = <8>;
+    };
+    adc2: channel@2 {
+        reg = <2>; // channel number
+        zephyr,reference = "ADC_REF_INTERNAL";
+        zephyr,gain = "ADC_GAIN_1_5";
+        zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
+        zephyr,input-positive = <NRF_SAADC_AIN0>; // P0.02
         zephyr,resolution = <8>;
     };
     status = "okay";

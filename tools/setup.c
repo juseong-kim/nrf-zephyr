@@ -5,14 +5,19 @@
 /* Logger */
 LOG_MODULE_REGISTER(setup, LOG_LEVEL_DBG);
 
-void check_devices_ready(struct gpio_dt_spec led, struct adc_dt_spec adc, struct pwm_dt_spec pwm)
+void check_devices_ready(struct gpio_dt_spec led, struct pwm_dt_spec pwm,
+                         struct adc_dt_spec adc0, struct adc_dt_spec adc1, struct adc_dt_spec adc2)
 {
     // Check gpio0 interface
     if (!device_is_ready(led.port))
         LOG_ERR("GPIO0 not ready.");
-    // Check ADC device
-    if (!device_is_ready(adc.dev))
-        LOG_ERR("ADC not ready.");
+    // Check ADC devices
+    if (!device_is_ready(adc0.dev))
+        LOG_ERR("ADC Channel 0 not ready.");
+    if (!device_is_ready(adc1.dev))
+        LOG_ERR("ADC Channel 1 not ready.");
+    if (!device_is_ready(adc2.dev))
+        LOG_ERR("ADC Channel 2 not ready.");
     // Check PWM
     if (!device_is_ready(pwm.dev))
         LOG_ERR("PWM not ready.");
@@ -20,7 +25,7 @@ void check_devices_ready(struct gpio_dt_spec led, struct adc_dt_spec adc, struct
 
 void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2,
                     struct gpio_dt_spec btn1, struct gpio_dt_spec btn2,
-                    struct adc_dt_spec adc1, struct adc_dt_spec adc2)
+                    struct adc_dt_spec adc0, struct adc_dt_spec adc1, struct adc_dt_spec adc2)
 {
     int err;
     // Output LED pins
@@ -36,14 +41,14 @@ void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2,
         LOG_ERR("Error configuring input button pins.");
 
     // ADC input pin
-    err = adc_channel_setup_dt(&adc1);
+    err = adc_channel_setup_dt(&adc0);
+    err += adc_channel_setup_dt(&adc1);
     err += adc_channel_setup_dt(&adc2);
     if (err)
         LOG_ERR("Error configuring ADC input pins.");
 }
 
 /* Callbacks */
-static const uint8_t SAMPLE_DATA[N_BLE] = {0x1a, 0x2a, 0x3a, 0x4a, 0x5a, 0x1f, 0x2f, 0x3f, 0x4f, 0x5f};
 void on_save(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     if (state == STATE_DEFAULT)
