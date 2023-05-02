@@ -17,7 +17,7 @@ extern struct bt_conn *current_conn;
 /* Functions */
 void check_devices_ready(struct gpio_dt_spec led, struct pwm_dt_spec pwm,
                          struct adc_dt_spec adc0, struct adc_dt_spec adc1, struct adc_dt_spec adc2);
-void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2,
+void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2, struct gpio_dt_spec led3,
                     struct gpio_dt_spec btn1, struct gpio_dt_spec btn2,
                     struct adc_dt_spec adc0, struct adc_dt_spec adc1, struct adc_dt_spec adc2);
 void on_save(const struct device *dev, struct gpio_callback *cb, uint32_t pins);

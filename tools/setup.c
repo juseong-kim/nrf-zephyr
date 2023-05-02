@@ -23,14 +23,15 @@ void check_devices_ready(struct gpio_dt_spec led, struct pwm_dt_spec pwm,
         LOG_ERR("PWM not ready.");
 }
 
-void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2,
+void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2, struct gpio_dt_spec led3,
                     struct gpio_dt_spec btn1, struct gpio_dt_spec btn2,
                     struct adc_dt_spec adc0, struct adc_dt_spec adc1, struct adc_dt_spec adc2)
 {
     int err;
     // Output LED pins
     err = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_LOW);
-    err += gpio_pin_configure_dt(&led2, GPIO_OUTPUT_LOW);
+    err = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_LOW);
+    err += gpio_pin_configure_dt(&led3, GPIO_OUTPUT_LOW);
     if (err)
         LOG_ERR("Error configuring output LED pins.");
 

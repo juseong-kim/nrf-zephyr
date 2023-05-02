@@ -125,6 +125,7 @@ int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)
     k_sem_take(&bt_init_ok, K_FOREVER);
 
     if (IS_ENABLED(CONFIG_BT_SETTINGS)) settings_load();
+    else LOG_DBG("Skipped settings_load().");
 
     ret = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (ret)

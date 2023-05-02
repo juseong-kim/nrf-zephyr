@@ -33,22 +33,6 @@ int err;
 /* Battery Level */
 K_TIMER_DEFINE(battery_check_timer, check_battery_level, NULL);
 
-/* VBUS */
-int check_vbus(void);
-int check_vbus(void) {
-	bool usbregstatus = nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
-	if (usbregstatus) {
-		LOG_ERR("VBUS voltage detected. Device cannot be operated while charging.");
-		state = STATE_VBUS_DETECTED;
-		return -1;
-	}
-	else {
-		LOG_DBG("VBUS voltage checked and not detected.");
-		state = STATE_DEFAULT;
-	}
-	return 0;
-}
-
 /* ADC macros */
 #define ADC_DT_SPEC_GET_BY_ALIAS(node_id)                   \
 	{                                                       \
@@ -67,6 +51,7 @@ const struct pwm_dt_spec pwm2 = PWM_DT_SPEC_GET(DT_ALIAS(pwm_2));
 /* LEDs */
 const struct gpio_dt_spec led1 = GPIO_DT_SPEC_GET(DT_ALIAS(led_1), gpios);
 const struct gpio_dt_spec led2 = GPIO_DT_SPEC_GET(DT_ALIAS(led_2), gpios);
+const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(DT_ALIAS(led_3), gpios);
 
 /* Buttons */
 const struct gpio_dt_spec btn_save = GPIO_DT_SPEC_GET(DT_ALIAS(btnsave), gpios);
@@ -76,6 +61,40 @@ const struct gpio_dt_spec btn_bt = GPIO_DT_SPEC_GET(DT_ALIAS(btnbt), gpios);
 const struct adc_dt_spec adc1 = ADC_DT_SPEC_GET_BY_ALIAS(adc_1);
 const struct adc_dt_spec adc2 = ADC_DT_SPEC_GET_BY_ALIAS(adc_2);
 const struct adc_dt_spec adc_bat = ADC_DT_SPEC_GET_BY_ALIAS(adc_3);
+
+/* VBUS */
+void toggle_vbus_led(struct k_timer *vbus_led_timer);
+void toggle_vbus_led(struct k_timer *vbus_led_timer)
+{
+	err = gpio_pin_toggle_dt(&led3);
+	if (err)
+		LOG_ERR("Error toggling VBUS LED.");
+}
+void set_vbus_led_off(struct k_timer *vbus_led_timer);
+void set_vbus_led_off(struct k_timer *vbus_led_timer)
+{
+	err = gpio_pin_set_dt(&led3, 0);
+	if (err)
+		LOG_ERR("Error turning off VBUS LED.");
+}
+K_TIMER_DEFINE(vbus_led_timer, toggle_vbus_led, NULL);
+
+void check_vbus(struct k_timer *vbus_timer);
+void check_vbus(struct k_timer *vbus_timer) {
+	bool usbregstatus = nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
+	if (usbregstatus) {
+		LOG_ERR("VBUS voltage detected. Device cannot be operated while charging.");
+		state = STATE_VBUS_DETECTED;
+		if(k_timer_remaining_get(&vbus_led_timer) == 0)
+			k_timer_start(&vbus_led_timer, K_MSEC(T_VBUS_LED), K_MSEC(T_VBUS_LED));
+	}
+	else {
+		LOG_DBG("VBUS voltage checked and not detected.");
+		k_timer_stop(&vbus_led_timer);
+		state = STATE_DEFAULT;
+	}
+}
+K_TIMER_DEFINE(vbus_timer, check_vbus, NULL);
 
 /* BLE */
 struct bt_conn *current_conn;
@@ -139,20 +158,21 @@ void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int
 		if(err) LOG_ERR("Error updating duty cycle of PWM channel %d", pwm.channel);
 	}
 	else {
-		noop
+		nop
 	}
 }
 
 void main(void)
 {
 	check_devices_ready(led1, pwm1, adc1, adc2, adc_bat);
-	configure_pins(led1, led2, btn_save, btn_bt, adc1, adc2, adc_bat);
+	configure_pins(led1, led2, led3, btn_save, btn_bt, adc1, adc2, adc_bat);
 	setup_callbacks(btn_save, btn_bt);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
 	// int limit = 0;
 	k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S));
-	
+	k_timer_start(&vbus_timer, K_SECONDS(T_VBUS_S), K_SECONDS(T_VBUS_S));
+
 	while (1)
 	{
 		// if (!usbc_vbus_check_level(DT_ALIAS(usbd), 1)){
@@ -164,9 +184,6 @@ void main(void)
 			modulate_led_brightness(adc1, pwm1, 1);
 			modulate_led_brightness(adc2, pwm2, 2);
 		}
-		// TODO implement below in timer
-		check_vbus();
-		// TODO add blinking LED3 if VBUS detected
 		// limit++;
 	}
 }

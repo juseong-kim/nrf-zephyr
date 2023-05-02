@@ -5,6 +5,7 @@
         btnbt = &button1;
         led-1 = &led1;
         led-2 = &led2;
+        led-3 = &led3;
         pwm-1 = &pwm_led1;
         pwm-2 = &pwm_led2;
         adc-1 = &adc0;
