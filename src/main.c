@@ -20,8 +20,8 @@ LOG_MODULE_REGISTER(main, LOG_LEVEL_INF);
 int state = STATE_DEFAULT;
 
 /* Voltages */
-uint8_t vq1[N_VOLTAGE] = {0}; // index via vble[(i1+i) % 10]
-uint16_t vq2[N_VOLTAGE] = {0};
+int8_t vq1[N_VOLTAGE] = {0}; // index via vble[(i1+i) % 10]
+int16_t vq2[N_VOLTAGE] = {0};
 uint16_t vble[N_BLE] = {0};
 int i1_1 = 0;
 int i1_2 = 0;
@@ -53,6 +53,7 @@ const struct gpio_dt_spec led3 = GPIO_DT_SPEC_GET(DT_ALIAS(led_3), gpios);
 /* Buttons */
 const struct gpio_dt_spec btn_save = GPIO_DT_SPEC_GET(DT_ALIAS(btnsave), gpios);
 const struct gpio_dt_spec btn_bt = GPIO_DT_SPEC_GET(DT_ALIAS(btnbt), gpios);
+const struct gpio_dt_spec btn_bat = GPIO_DT_SPEC_GET(DT_ALIAS(btnbat), gpios);
 
 /* ADCs */
 const struct adc_dt_spec adc1 = ADC_DT_SPEC_GET_BY_ALIAS(adc_1);
@@ -94,14 +95,14 @@ void check_vbus(struct k_timer *vbus_timer) {
 K_TIMER_DEFINE(vbus_timer, check_vbus, NULL);
 
 /* Battery Level */
-void check_battery_level(struct k_timer *timer);
-void check_battery_level(struct k_timer *timer)
+void check_battery_level(struct k_timer *battery_check_timer);
+void check_battery_level(struct k_timer *battery_check_timer)
 {
 	// Bluetooth set battery level
-	int mV = read_adc(adc_bat);
-	bluetooth_set_battery_level(mV, NOMINAL_BATT_MV);
-	// uint8_t battery_level = bluetooth_get_battery_level();
-	// set battery indicators (LEDs)
+	if (state == STATE_DEFAULT) {
+		int mV = read_adc(adc_bat);
+		bluetooth_set_battery_level(mV, NOMINAL_BATT_MV);
+	}
 }
 K_TIMER_DEFINE(battery_check_timer, check_battery_level, NULL);
 
@@ -123,10 +124,10 @@ void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int
 	if (state == STATE_DEFAULT){
 		add_v(led, mV);
 		int vpp_max = led == 1 ? VPP_MAX1 : VPP_MAX2;
-		int vble_idx = led == 1 ? T_DATA_S - 1 : (T_DATA_S * 2) - 1;
-		double pwm_frac = vble[vble_idx] < vpp_max ? vble[vble_idx] / (double)vpp_max : 0.99;
+		int vble_idx = led == 1 ? T_DATA_S - 1 : (T_DATA_S * N_INPUT) - 1;
+		double pwm_frac = vble[vble_idx] < vpp_max ? vble[vble_idx] / (double)vpp_max : 0.999999;
 		uint32_t pulsewidth = pwm.period * pwm_frac;
-		LOG_DBG("LED%d PW = %d = \t%d * %f\t(%d / %d)", led, pulsewidth, pwm.period, pwm_frac, vble[vble_idx], vpp_max);
+		LOG_DBG("LED%d\tpw=%d\t=%d*%f\tvrms/vmax=%d/%d", led, pulsewidth, pwm.period, pwm_frac, vble[vble_idx], vpp_max);
 		err = pwm_set_pulse_dt(&pwm, pulsewidth);
 		if(err) LOG_ERR("Error updating duty cycle of PWM channel %d", pwm.channel);
 	}
@@ -138,12 +139,13 @@ void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int
 void main(void)
 {
 	check_devices_ready(led1, pwm1, adc1, adc2, adc_bat);
-	configure_pins(led1, led2, led3, btn_save, btn_bt, adc1, adc2, adc_bat);
-	setup_callbacks(btn_save, btn_bt);
+	configure_pins(led1, led2, led3, btn_save, btn_bt, btn_bat, adc1, adc2, adc_bat);
+	setup_callbacks(btn_save, btn_bt, btn_bat);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
 	// k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S)); // TODO This timer forces device to reboot
-	k_timer_start(&vbus_timer, K_SECONDS(T_VBUS_S), K_SECONDS(T_VBUS_S));
+	k_timer_start(&vbus_timer, K_MSEC(T_VBUS), K_MSEC(T_VBUS));
+	k_msleep(50);
 	while (1)
 	{
 		k_msleep(T_ADC_READ);

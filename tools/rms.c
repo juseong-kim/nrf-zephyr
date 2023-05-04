@@ -11,26 +11,32 @@ void add_v(int led, int val)
 
     // compute squared sums for each second
     for (int i = imin; i < imax; i++)
-    {
+    { // TODO check algorithm for why sqsum[4] is consistently large
         int i1 = (i0 + (i * N_VOLTAGE / T_DATA_S)) % (N_VOLTAGE);
+        if(led==1) LOG_DBG("1.ss[%d]=%f\ti0=%d\ti1=%d", i, sqsum[i],i0,i1);
         sqsum[i] -= led == 1 ? vq1[i1] * vq1[i1] : vq2[i1] * vq2[i1];
+        if (led == 1) LOG_DBG("2.ss[%d]-=vq1[i1]^2=\t%d^2=%f",i,vq1[i1],sqsum[i]);
+
         if (i < imax - 1) {
             int i2 = (i0 + ((i + 1) * N_VOLTAGE / T_DATA_S)) % (N_VOLTAGE);
             sqsum[i] += led == 1 ? vq1[i2] * vq1[i2] : vq2[i2] * vq2[i2];
+            if(led==1) LOG_DBG("3.ss[%d]+=vq1[i2]^2=\t%d^2=%f",i,vq1[i2],sqsum[i]);
         }
         else {
             sqsum[i] += val * val;
-            // LOG_DBG("sqsum[%d] = (%d)^2", i, val);
+            if(led==1) LOG_DBG("3.ss[%d]+=val^2=\t%d^2=%f",i,val,sqsum[i]);
         }
     }
 
     // add new value (FIFO)
-    if (led == 1){
+    if (led == 1)
+    {
         vq1[i0] = val;
         i1_1++;
         i1_1 %= (N_VOLTAGE);
     }
-    else if (led == 2) {
+    else if (led == 2)
+    {
         vq2[i0] = val;
         i1_2++;
         i1_2 %= (N_VOLTAGE);
@@ -53,8 +59,8 @@ void calculate_rms(void)
     for (int i = 0; i < N_BLE; i++)
     {
         LOG_DBG("ss[%d] = %f", i, sqsum[i]);
-        LOG_DBG("vrms = %f \t=%d", sqrt(sqsum[i] / (N_VOLTAGE / T_DATA_S)), N_VOLTAGE / T_DATA_S);
+        LOG_DBG("vrms = %f", sqrt(sqsum[i] / (N_VOLTAGE / T_DATA_S)));
         vble[i] = (uint16_t)sqrt(sqsum[i] / (N_VOLTAGE / T_DATA_S));
-        // LOG_INF("vble[%d] = %d", i, vble[i]);
+        LOG_DBG("vble[%d] = %d", i, vble[i]);
     }
 }

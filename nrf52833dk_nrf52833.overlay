@@ -1,8 +1,9 @@
 / {
     aliases {
-        usbd = &usbd;
+        // usbd = &usbd;
         btnsave = &button0;
         btnbt = &button1;
+        btnbat = &button2;
         led-1 = &led1;
         led-2 = &led2;
         led-3 = &led3;
@@ -51,6 +52,10 @@
             gpios = <&gpio0 12 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "Button 2";
         };
+        button2: button_2 {
+            gpios = <&gpio0 24 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+            label = "Button 3";
+        };
     };
 
     zephyr,user {
@@ -63,9 +68,7 @@
     #size-cells = <0>;
 
     adc0: channel@0 {   // +/- 5-50 mV
-        reg = <0>; 
-        // zephyr,reference = "ADC_REF_INTERNAL";
-        // zephyr,gain = "ADC_GAIN_6";
+        reg = <0>;
         zephyr,reference = "ADC_REF_INTERNAL";
         zephyr,gain = "ADC_GAIN_4";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
@@ -84,11 +87,11 @@
     };
     adc2: channel@2 { // Battery
         reg = <2>;
-        zephyr,reference = "ADC_REF_VDD_1_4";
+        zephyr,reference = "ADC_REF_INTERNAL";
         zephyr,gain = "ADC_GAIN_1_6";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
         zephyr,input-positive = <NRF_SAADC_AIN0>; // P0.02
-        zephyr,resolution = <8>;
+        zephyr,resolution = <12>;
     };
     status = "okay";
 };
@@ -123,7 +126,7 @@
     };
 };
 
-zephyr_udc0: &usbd {
-    compatible = "nordic,nrf-usbd";
-    status = "okay";
-};
+// zephyr_udc0: &usbd {
+//     compatible = "nordic,nrf-usbd";
+//     status = "okay";
+// };

@@ -7,8 +7,8 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 
-extern uint8_t vq1[N_VOLTAGE];
-extern uint16_t vq2[N_VOLTAGE];
+extern int8_t vq1[N_VOLTAGE];
+extern int16_t vq2[N_VOLTAGE];
 extern uint16_t vble[N_BLE];
 extern int i1_1;
 extern int i1_2;
