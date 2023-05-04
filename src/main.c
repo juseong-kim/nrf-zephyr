@@ -21,11 +21,11 @@ int state = STATE_DEFAULT;
 
 /* Voltages */
 uint8_t vq1[N_VOLTAGE] = {0}; // index via vble[(i1+i) % 10]
-uint8_t vq2[N_VOLTAGE] = {0};
-uint8_t vble[N_BLE] = {0};
+uint16_t vq2[N_VOLTAGE] = {0};
+uint16_t vble[N_BLE] = {0};
 int i1_1 = 0;
 int i1_2 = 0;
-long long int sqsum[N_BLE] = {0};
+float sqsum[N_BLE] = {0};
 
 /* Miscellaneous */
 int err;
@@ -77,7 +77,7 @@ void set_vbus_led_off(struct k_timer *vbus_led_timer)
 	if (err)
 		LOG_ERR("Error turning off VBUS LED.");
 }
-K_TIMER_DEFINE(vbus_led_timer, toggle_vbus_led, NULL);
+K_TIMER_DEFINE(vbus_led_timer, toggle_vbus_led, set_vbus_led_off);
 
 void check_vbus(struct k_timer *vbus_timer);
 void check_vbus(struct k_timer *vbus_timer) {
@@ -152,8 +152,11 @@ void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int
 	int mV = read_adc(adc);
 	if (state == STATE_DEFAULT){
 		add_v(led, mV);
-		uint32_t pulsewidth = pwm.period * (vble[T_DATA_S-1] / 3300.0);
-		// LOG_DBG("LED%d RMS = %d", led, vble[T_DATA_S - 1]);
+		int vpp_max = led == 1 ? VPP_MAX1 : VPP_MAX2;
+		int vble_idx = led == 1 ? T_DATA_S - 1 : (T_DATA_S * 2) - 1;
+		double pwm_frac = vble[vble_idx] < vpp_max ? vble[vble_idx] / (double)vpp_max : 0.99;
+		uint32_t pulsewidth = pwm.period * pwm_frac;
+		LOG_INF("LED%d PW = %d = \t%d * %f\t(%d / %d)", led, pulsewidth, pwm.period, pwm_frac, vble[vble_idx], vpp_max);
 		err = pwm_set_pulse_dt(&pwm, pulsewidth);
 		if(err) LOG_ERR("Error updating duty cycle of PWM channel %d", pwm.channel);
 	}
@@ -169,21 +172,15 @@ void main(void)
 	setup_callbacks(btn_save, btn_bt);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
-	// int limit = 0;
-	k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S));
+	// k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S));
 	k_timer_start(&vbus_timer, K_SECONDS(T_VBUS_S), K_SECONDS(T_VBUS_S));
-
 	while (1)
 	{
-		// if (!usbc_vbus_check_level(DT_ALIAS(usbd), 1)){
-		// 	LOG_DBG("NOT above 1");
-		// }
 		k_msleep(T_ADC_READ);
-		if (state == STATE_DEFAULT){
-			// TODO: implement below in timer
+		if (state == STATE_DEFAULT)
+		{
 			modulate_led_brightness(adc1, pwm1, 1);
 			modulate_led_brightness(adc2, pwm2, 2);
 		}
-		// limit++;
 	}
 }

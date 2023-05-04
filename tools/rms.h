@@ -8,11 +8,11 @@
 #include <zephyr/sys/printk.h>
 
 extern uint8_t vq1[N_VOLTAGE];
-extern uint8_t vq2[N_VOLTAGE];
-extern uint8_t vble[N_BLE];
+extern uint16_t vq2[N_VOLTAGE];
+extern uint16_t vble[N_BLE];
 extern int i1_1;
 extern int i1_2;
-extern long long int sqsum[N_BLE];
+extern float sqsum[N_BLE];
 
 void add_v(int led, int val);
 void calculate_rms(void);

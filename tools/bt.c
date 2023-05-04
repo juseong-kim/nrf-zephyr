@@ -7,7 +7,7 @@ static K_SEM_DEFINE(bt_init_ok, 1, 1);
 
 #define DEVICE_NAME CONFIG_BT_DEVICE_NAME
 #define DEVICE_NAME_LEN (sizeof(DEVICE_NAME) - 1)
-static uint8_t data[N_BLE] = {0};
+static uint16_t data[N_BLE] = {0};
 static struct bt_remote_srv_cb remote_service_callbacks;
 enum bt_data_notifications_enabled notifications_enabled;
 
@@ -125,7 +125,6 @@ int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)
     k_sem_take(&bt_init_ok, K_FOREVER);
 
     if (IS_ENABLED(CONFIG_BT_SETTINGS)) settings_load();
-    else LOG_DBG("Skipped settings_load().");
 
     ret = bt_le_adv_start(BT_LE_ADV_CONN, ad, ARRAY_SIZE(ad), sd, ARRAY_SIZE(sd));
     if (ret)
@@ -141,7 +140,7 @@ int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)
 extern struct adc_dt_spec adc_bat;
 
 void check_battery_level(struct k_timer *timer)
-{ // TODO
+{
     // Bluetooth set battery level
     bluetooth_set_battery_level(read_adc(adc_bat), NOMINAL_BATT_MV);
     // uint8_t battery_level = bluetooth_get_battery_level();

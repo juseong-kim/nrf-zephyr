@@ -6,7 +6,7 @@
 #define STATE_VBUS_DETECTED -1
 
 /* ADC */
-#define T_ADC_READ 50
+#define T_ADC_READ 1000
 #define T_DATA 5000
 #define T_DATA_S 5
 #define N_VOLTAGE T_DATA / T_ADC_READ
@@ -21,6 +21,10 @@
 /* VBUS */
 #define T_VBUS_LED 500
 #define T_VBUS_S 5
+
+/* Input Voltages */
+#define VPP_MAX1 100
+#define VPP_MAX2 300
 
 /* Miscellaneous */
 #define nop

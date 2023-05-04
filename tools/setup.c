@@ -31,7 +31,7 @@ void configure_pins(struct gpio_dt_spec led1, struct gpio_dt_spec led2, struct g
     // Output LED pins
     err = gpio_pin_configure_dt(&led1, GPIO_OUTPUT_LOW);
     err = gpio_pin_configure_dt(&led2, GPIO_OUTPUT_LOW);
-    err += gpio_pin_configure_dt(&led3, GPIO_OUTPUT_LOW);
+    err += gpio_pin_configure_dt(&led3, GPIO_OUTPUT_INACTIVE);
     if (err)
         LOG_ERR("Error configuring output LED pins.");
 
@@ -54,7 +54,7 @@ void on_save(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     if (state == STATE_DEFAULT)
     {
-        calculate_rms();
+        // calculate_rms();
         set_data(vble);
         // set_data(SAMPLE_DATA);
     }
@@ -64,7 +64,7 @@ void on_bt_send(const struct device *dev, struct gpio_callback *cb, uint32_t pin
 {
     if (state == STATE_DEFAULT)
     {
-        // int idx; // send the two, 5-point data arrays to phone via Bluetooth
+        // send the two, 5-point data arrays to phone via Bluetooth
         LOG_INF("Sending arrays to phone via Bluetooth");
 
         err = send_data_notification(current_conn, N_BLE);

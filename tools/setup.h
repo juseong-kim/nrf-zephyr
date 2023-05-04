@@ -10,8 +10,8 @@
 /* States */
 extern int state;
 extern int err;
-extern uint8_t vble[N_BLE];
-extern long long int sqsum[N_BLE];
+extern uint16_t vble[N_BLE];
+extern float sqsum[N_BLE];
 extern struct bt_conn *current_conn;
 
 /* Functions */
