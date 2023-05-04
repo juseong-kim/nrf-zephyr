@@ -126,7 +126,7 @@ void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int
 		int vble_idx = led == 1 ? T_DATA_S - 1 : (T_DATA_S * 2) - 1;
 		double pwm_frac = vble[vble_idx] < vpp_max ? vble[vble_idx] / (double)vpp_max : 0.99;
 		uint32_t pulsewidth = pwm.period * pwm_frac;
-		LOG_INF("LED%d PW = %d = \t%d * %f\t(%d / %d)", led, pulsewidth, pwm.period, pwm_frac, vble[vble_idx], vpp_max);
+		LOG_DBG("LED%d PW = %d = \t%d * %f\t(%d / %d)", led, pulsewidth, pwm.period, pwm_frac, vble[vble_idx], vpp_max);
 		err = pwm_set_pulse_dt(&pwm, pulsewidth);
 		if(err) LOG_ERR("Error updating duty cycle of PWM channel %d", pwm.channel);
 	}
@@ -142,7 +142,7 @@ void main(void)
 	setup_callbacks(btn_save, btn_bt);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
-	// k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S));
+	// k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S)); // TODO This timer forces device to reboot
 	k_timer_start(&vbus_timer, K_SECONDS(T_VBUS_S), K_SECONDS(T_VBUS_S));
 	while (1)
 	{
