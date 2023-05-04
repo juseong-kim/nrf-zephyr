@@ -30,9 +30,6 @@ float sqsum[N_BLE] = {0};
 /* Miscellaneous */
 int err;
 
-/* Battery Level */
-K_TIMER_DEFINE(battery_check_timer, check_battery_level, NULL);
-
 /* ADC macros */
 #define ADC_DT_SPEC_GET_BY_ALIAS(node_id)                   \
 	{                                                       \
@@ -96,12 +93,20 @@ void check_vbus(struct k_timer *vbus_timer) {
 }
 K_TIMER_DEFINE(vbus_timer, check_vbus, NULL);
 
+/* Battery Level */
+void check_battery_level(struct k_timer *timer);
+void check_battery_level(struct k_timer *timer)
+{
+	// Bluetooth set battery level
+	int mV = read_adc(adc_bat);
+	bluetooth_set_battery_level(mV, NOMINAL_BATT_MV);
+	// uint8_t battery_level = bluetooth_get_battery_level();
+	// set battery indicators (LEDs)
+}
+K_TIMER_DEFINE(battery_check_timer, check_battery_level, NULL);
+
 /* BLE */
-struct bt_conn *current_conn;
-void on_connected(struct bt_conn *conn, uint8_t ret);
-void on_disconnected(struct bt_conn *conn, uint8_t reason);
-void on_notif_changed(enum bt_data_notifications_enabled status);
-void on_data_rx(struct bt_conn *conn, const uint8_t *const data, uint16_t len);
+extern struct bt_conn *current_conn;
 struct bt_conn_cb bluetooth_callbacks = {
 	.connected = on_connected,
 	.disconnected = on_disconnected,
@@ -111,41 +116,6 @@ struct bt_remote_srv_cb remote_service_callbacks = {
 	.notif_changed = on_notif_changed,
 	.data_rx = on_data_rx,
 };
-
-// BLE Callbacks
-void on_data_rx(struct bt_conn *conn, const uint8_t *const data, uint16_t len)
-{
-	// manually append NULL character at the end
-	uint8_t temp_str[len + 1];
-	memcpy(temp_str, data, len);
-	temp_str[len] = 0x00;
-
-	LOG_INF("BT received data on conn %p. Len: %d", (void *)conn, len);
-	LOG_INF("Data: %s", temp_str);
-}
-
-void on_connected(struct bt_conn *conn, uint8_t ret)
-{
-	if (ret) LOG_ERR("Connection error: %d", ret);
-	LOG_INF("BT connected");
-	current_conn = bt_conn_ref(conn);
-}
-
-void on_disconnected(struct bt_conn *conn, uint8_t reason)
-{
-	LOG_INF("BT disconnected (reason: %d)", reason);
-	if (current_conn)
-	{
-		bt_conn_unref(current_conn);
-		current_conn = NULL;
-	}
-}
-
-void on_notif_changed(enum bt_data_notifications_enabled status)
-{
-	if (status == BT_DATA_NOTIFICATIONS_ENABLED) LOG_INF("BT notifications enabled");
-	else LOG_INF("BT notifications disabled");
-}
 
 void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int led)
 {

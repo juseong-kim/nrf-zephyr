@@ -16,7 +16,7 @@
 
 /* Battery */
 #define T_BAT_CHECK_S 10
-#define NOMINAL_BATT_MV 3300
+#define NOMINAL_BATT_MV 3700
 
 /* VBUS */
 #define T_VBUS_LED 500

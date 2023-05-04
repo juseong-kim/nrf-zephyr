@@ -67,7 +67,7 @@ void on_bt_send(const struct device *dev, struct gpio_callback *cb, uint32_t pin
         // send the two, 5-point data arrays to phone via Bluetooth
         LOG_INF("Sending arrays to phone via Bluetooth");
 
-        err = send_data_notification(current_conn, N_BLE);
+        err = send_data_notification(current_conn, N_BLE*2);
         if (err)
             LOG_ERR("Could not send BT notification (err: %d)", err);
     }

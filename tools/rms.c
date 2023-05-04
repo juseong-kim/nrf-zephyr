@@ -1,7 +1,7 @@
 #include "rms.h"
 
 /* Logger */
-LOG_MODULE_REGISTER(rms, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(rms, LOG_LEVEL_INF);
 
 void add_v(int led, int val)
 {

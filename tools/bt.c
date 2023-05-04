@@ -94,7 +94,7 @@ int send_data_notification(struct bt_conn *conn, uint16_t length)
     return ret;
 }
 
-void set_data(uint8_t *data_in)
+void set_data(uint16_t *data_in)
 {
     memcpy(data, data_in, sizeof(data));
     LOG_DBG("Data set via memcpy (size = %d).", sizeof(data));
@@ -136,17 +136,46 @@ int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)
     return ret;
 }
 
-/* Battery */
-extern struct adc_dt_spec adc_bat;
-
-void check_battery_level(struct k_timer *timer)
+// BLE Callbacks
+struct bt_conn *current_conn;
+void on_data_rx(struct bt_conn *conn, const uint16_t *const data, uint16_t len)
 {
-    // Bluetooth set battery level
-    bluetooth_set_battery_level(read_adc(adc_bat), NOMINAL_BATT_MV);
-    // uint8_t battery_level = bluetooth_get_battery_level();
-    // set battery indicators (LEDs)
+    // manually append NULL character at the end
+    uint8_t temp_str[len + 1];
+    memcpy(temp_str, data, len);
+    temp_str[len] = 0x00;
+
+    LOG_INF("BT received data on conn %p. Len: %d", (void *)conn, len);
+    LOG_INF("Data: %s", temp_str);
 }
 
+void on_connected(struct bt_conn *conn, uint8_t ret)
+{
+    if (ret)
+        LOG_ERR("Connection error: %d", ret);
+    LOG_INF("BT connected");
+    current_conn = bt_conn_ref(conn);
+}
+
+void on_disconnected(struct bt_conn *conn, uint8_t reason)
+{
+    LOG_INF("BT disconnected (reason: %d)", reason);
+    if (current_conn)
+    {
+        bt_conn_unref(current_conn);
+        current_conn = NULL;
+    }
+}
+
+void on_notif_changed(enum bt_data_notifications_enabled status)
+{
+    if (status == BT_DATA_NOTIFICATIONS_ENABLED)
+        LOG_INF("BT notifications enabled");
+    else
+        LOG_INF("BT notifications disabled");
+}
+
+/* Battery */
 uint8_t bluetooth_get_battery_level(void){
     uint8_t battery_level;
 
