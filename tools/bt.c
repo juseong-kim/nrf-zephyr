@@ -136,7 +136,6 @@ int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)
     return ret;
 }
 
-// BLE Callbacks
 struct bt_conn *current_conn;
 void on_data_rx(struct bt_conn *conn, const uint16_t *const data, uint16_t len)
 {
@@ -193,7 +192,7 @@ void bluetooth_set_battery_level(int level, int nominal_batt_level){
     if (normalized_level > 100) normalized_level = 100;
     else if (normalized_level < 0) normalized_level = 0;
 
-    LOG_INF("Battery Percentage: %.2f %%", normalized_level);
+    LOG_DBG("Battery Percentage: %.2f %%", normalized_level);
 
     int err = bt_bas_set_battery_level((uint8_t)normalized_level);
     if (err) LOG_ERR("BAS set error (err = %d)", err);

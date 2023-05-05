@@ -1,9 +1,7 @@
 / {
     aliases {
-        // usbd = &usbd;
         btnsave = &button0;
         btnbt = &button1;
-        btnbat = &button2;
         led-1 = &led1;
         led-2 = &led2;
         led-3 = &led3;
@@ -51,10 +49,6 @@
         button1: button_1 {
             gpios = <&gpio0 12 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
             label = "Button 2";
-        };
-        button2: button_2 {
-            gpios = <&gpio0 24 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
-            label = "Button 3";
         };
     };
 
@@ -125,8 +119,3 @@
         };
     };
 };
-
-// zephyr_udc0: &usbd {
-//     compatible = "nordic,nrf-usbd";
-//     status = "okay";
-// };
