@@ -82,9 +82,16 @@ void check_vbus(struct k_timer *vbus_timer) {
 	bool usbregstatus = nrf_power_usbregstatus_vbusdet_get(NRF_POWER);
 	if (usbregstatus) {
 		LOG_ERR("VBUS voltage detected. Device cannot be operated while charging.");
-		state = STATE_VBUS_DETECTED;
-		if(k_timer_remaining_get(&vbus_led_timer) == 0)
+		if(state==STATE_DEFAULT) {
+			LOG_DBG("VBUS LED timer started.");
 			k_timer_start(&vbus_led_timer, K_MSEC(T_VBUS_LED), K_MSEC(T_VBUS_LED));
+		}
+		state = STATE_VBUS_DETECTED;
+
+		err = gpio_pin_set_dt(&led1, 0);
+		if (err) LOG_ERR("Error turning off LED 1.");
+		err = gpio_pin_set_dt(&led2, 0);
+		if (err) LOG_ERR("Error turning off LED 1.");
 	}
 	else {
 		LOG_DBG("VBUS voltage checked and not detected.");
@@ -118,14 +125,26 @@ struct bt_remote_srv_cb remote_service_callbacks = {
 	.data_rx = on_data_rx,
 };
 
+double vpp_to_ratio(int vpp, int vpp_min, int vpp_max);
+double vpp_to_ratio(int vpp, int vpp_min, int vpp_max)
+{
+	vpp = vpp < vpp_min ? vpp_min : vpp;
+	vpp = vpp > vpp_max ? vpp_max : vpp;
+	float slope = 1.0 / (vpp_max - vpp_min);
+	LOG_DBG("VPP=%d\tVmin=%d\tVmax=%d\tRatio=%f", vpp, vpp_min, vpp_max, slope * (vpp - vpp_min));
+	return slope * (vpp - vpp_min);
+}
+
 void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int led)
 {
 	int mV = read_adc(adc);
 	if (state == STATE_DEFAULT){
 		add_v(led, mV);
+		int vpp_min = led == 1 ? VPP_MIN1 : VPP_MIN2;
 		int vpp_max = led == 1 ? VPP_MAX1 : VPP_MAX2;
 		int vble_idx = led == 1 ? T_DATA_S - 1 : (T_DATA_S * N_INPUT) - 1;
-		double pwm_frac = vble[vble_idx] < vpp_max ? vble[vble_idx] / (double)vpp_max : 0.999999;
+		int vpp = vble[vble_idx] * sqrt(2);
+		double pwm_frac = vpp_to_ratio(vpp, vpp_min, vpp_max);
 		uint32_t pulsewidth = pwm.period * pwm_frac;
 		LOG_DBG("LED%d\tpw=%d\t=%d*%f\tvrms/vmax=%d/%d", led, pulsewidth, pwm.period, pwm_frac, vble[vble_idx], vpp_max);
 		err = pwm_set_pulse_dt(&pwm, pulsewidth);
@@ -143,12 +162,12 @@ void main(void)
 	setup_callbacks(btn_save, btn_bt, btn_bat);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
-	// k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S)); // TODO This timer forces device to reboot
+	k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S)); // TODO This timer forces device to reboot
 	k_timer_start(&vbus_timer, K_MSEC(T_VBUS), K_MSEC(T_VBUS));
-	k_msleep(50);
+	k_msleep(500);
 	while (1)
 	{
-		k_msleep(T_ADC_READ);
+		k_usleep(T_ADC_READ_US);
 		if (state == STATE_DEFAULT)
 		{
 			modulate_led_brightness(adc1, pwm1, 1);

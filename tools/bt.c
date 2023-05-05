@@ -1,7 +1,7 @@
 #include "bt.h"
 #include "macros.h"
 
-LOG_MODULE_REGISTER(bt, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(bt, LOG_LEVEL_DBG);
 
 static K_SEM_DEFINE(bt_init_ok, 1, 1);
 
@@ -194,7 +194,7 @@ void bluetooth_set_battery_level(int level, int nominal_batt_level){
     if (normalized_level > 100) normalized_level = 100;
     else if (normalized_level < 0) normalized_level = 0;
 
-    LOG_DBG("Battery Percentage: %.2f %%", normalized_level);
+    LOG_INF("Battery Percentage: %.2f %%", normalized_level);
 
     int err = bt_bas_set_battery_level((uint8_t)normalized_level);
     if (err) LOG_ERR("BAS set error (err = %d)", err);

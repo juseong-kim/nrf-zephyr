@@ -3,7 +3,7 @@
 #include "rms.h"
 
 /* Logger */
-LOG_MODULE_REGISTER(setup, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(setup, LOG_LEVEL_INF);
 
 void check_devices_ready(struct gpio_dt_spec led, struct pwm_dt_spec pwm,
                          struct adc_dt_spec adc0, struct adc_dt_spec adc1, struct adc_dt_spec adc2)
@@ -80,11 +80,12 @@ void on_bt_send(const struct device *dev, struct gpio_callback *cb, uint32_t pin
     }
 }
 
+extern struct adc_dt_spec adc_bat;
 void on_bat_send(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
     if (state == STATE_DEFAULT)
     {
-        extern struct adc_dt_spec adc_bat;
+        LOG_DBG("adc_bat\tcid=%d, name=%s", adc_bat.channel_id, adc_bat.dev->name);
         int mV = read_adc(adc_bat);
         bluetooth_set_battery_level(mV, NOMINAL_BATT_MV);
     }
