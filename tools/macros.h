@@ -7,7 +7,7 @@
 
 /* ADC */
 #define T_ADC_READ 500
-#define T_ADC_READ_US 500
+#define T_ADC_READ_US 1000
 #define T_DATA 5000
 #define T_DATA_S 5
 #define N_VOLTAGE T_DATA * 1000 / T_ADC_READ_US

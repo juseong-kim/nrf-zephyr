@@ -1,7 +1,7 @@
 #include "bt.h"
 #include "macros.h"
 
-LOG_MODULE_REGISTER(bt, LOG_LEVEL_DBG);
+LOG_MODULE_REGISTER(bt, LOG_LEVEL_INF);
 
 static K_SEM_DEFINE(bt_init_ok, 1, 1);
 
@@ -97,7 +97,7 @@ int send_data_notification(struct bt_conn *conn, uint16_t length)
 void set_data(uint16_t *data_in)
 {
     memcpy(data, data_in, sizeof(data));
-    LOG_DBG("Data set via memcpy (size = %d).", sizeof(data));
+    LOG_INF("Data set via memcpy (size = %d).", sizeof(data));
 }
 
 int bluetooth_init(struct bt_conn_cb *bt_cb, struct bt_remote_srv_cb *remote_cb)

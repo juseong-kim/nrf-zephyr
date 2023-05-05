@@ -101,6 +101,9 @@ void check_vbus(struct k_timer *vbus_timer) {
 }
 K_TIMER_DEFINE(vbus_timer, check_vbus, NULL);
 
+static double pwm_frac;
+// static double pwm_frac1;
+// static double pwm_frac2;
 /* Battery Level */
 void check_battery_level(struct k_timer *battery_check_timer);
 void check_battery_level(struct k_timer *battery_check_timer)
@@ -109,6 +112,8 @@ void check_battery_level(struct k_timer *battery_check_timer)
 	if (state == STATE_DEFAULT) {
 		int mV = read_adc(adc_bat);
 		bluetooth_set_battery_level(mV, NOMINAL_BATT_MV);
+		// LOG_DBG("PWM_FRAC1 = %f", pwm_frac1);
+		// LOG_DBG("PWM_FRAC2 = %f", pwm_frac2);
 	}
 }
 K_TIMER_DEFINE(battery_check_timer, check_battery_level, NULL);
@@ -144,7 +149,9 @@ void modulate_led_brightness(struct adc_dt_spec adc, struct pwm_dt_spec pwm, int
 		int vpp_max = led == 1 ? VPP_MAX1 : VPP_MAX2;
 		int vble_idx = led == 1 ? T_DATA_S - 1 : (T_DATA_S * N_INPUT) - 1;
 		int vpp = vble[vble_idx] * sqrt(2);
-		double pwm_frac = vpp_to_ratio(vpp, vpp_min, vpp_max);
+		pwm_frac = vpp_to_ratio(vpp, vpp_min, vpp_max);
+		// if (led == 1) pwm_frac1 = pwm_frac;
+		// if (led == 2) pwm_frac2 = pwm_frac;
 		uint32_t pulsewidth = pwm.period * pwm_frac;
 		LOG_DBG("LED%d\tpw=%d\t=%d*%f\tvrms/vmax=%d/%d", led, pulsewidth, pwm.period, pwm_frac, vble[vble_idx], vpp_max);
 		err = pwm_set_pulse_dt(&pwm, pulsewidth);

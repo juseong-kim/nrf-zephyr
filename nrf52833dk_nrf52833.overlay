@@ -88,7 +88,7 @@
     adc2: channel@2 { // Battery
         reg = <2>;
         zephyr,reference = "ADC_REF_INTERNAL";
-        zephyr,gain = "ADC_GAIN_1_6";
+        zephyr,gain = "ADC_GAIN_1_5";
         zephyr,acquisition-time = <ADC_ACQ_TIME_DEFAULT>;
         zephyr,input-positive = <NRF_SAADC_AIN0>; // P0.02
         zephyr,resolution = <12>;
