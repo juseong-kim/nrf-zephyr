@@ -105,6 +105,7 @@ static double pwm_frac;
 // static double pwm_frac1;
 // static double pwm_frac2;
 /* Battery Level */
+int batt_counter = 0;
 void check_battery_level(struct k_timer *battery_check_timer);
 void check_battery_level(struct k_timer *battery_check_timer)
 {
@@ -169,7 +170,7 @@ void main(void)
 	setup_callbacks(btn_save, btn_bt, btn_bat);
 	err = bluetooth_init(&bluetooth_callbacks, &remote_service_callbacks);
 	if (err) LOG_ERR("BT init failed (err = %d)", err);
-	k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S)); // TODO This timer forces device to reboot
+	// k_timer_start(&battery_check_timer, K_SECONDS(T_BAT_CHECK_S), K_SECONDS(T_BAT_CHECK_S)); // TODO This timer forces device to reboot
 	k_timer_start(&vbus_timer, K_MSEC(T_VBUS), K_MSEC(T_VBUS));
 	k_msleep(500);
 	while (1)
@@ -179,6 +180,13 @@ void main(void)
 		{
 			modulate_led_brightness(adc1, pwm1, 1);
 			modulate_led_brightness(adc2, pwm2, 2);
+			batt_counter++;
+			if(batt_counter == T_BAT_CHECK) {
+				batt_counter = 0;
+				int mV = read_adc(adc_bat);
+				bluetooth_set_battery_level(mV, NOMINAL_BATT_MV);
+			}
+			
 		}
 	}
 }

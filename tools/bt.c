@@ -188,9 +188,8 @@ uint8_t bluetooth_get_battery_level(void){
 void bluetooth_set_battery_level(int level, int nominal_batt_level){
     LOG_DBG("Battery Voltage: %d", level);
 
-    // Assume battery voltage is halved with external hardware (i.e. 3.7V -> 1.85V)
-
-    float normalized_level = (float)level * 100.0 / (nominal_batt_level/DIV_FACTOR_BATT);
+    // Assume battery voltage is reduced by 0.48648649x via external hardware (i.e. 3.7V -> 1.8V)
+    float normalized_level = (float)level * 100.0 / (nominal_batt_level * 0.48648649);
     if (normalized_level > 100) normalized_level = 100;
     else if (normalized_level < 0) normalized_level = 0;
 
@@ -199,3 +198,4 @@ void bluetooth_set_battery_level(int level, int nominal_batt_level){
     int err = bt_bas_set_battery_level((uint8_t)normalized_level);
     if (err) LOG_ERR("BAS set error (err = %d)", err);
 }
+

@@ -18,8 +18,9 @@
 
 /* Battery */
 #define T_BAT_CHECK_S 5
+#define T_BAT_CHECK ((T_BAT_CHECK_S * 1000) * (1000 / T_ADC_READ_US))
 #define NOMINAL_BATT_MV 3700
-#define DIV_FACTOR_BATT 2
+#define BATT_FACTOR 0.48648649
 
 /* VBUS */
 #define T_VBUS_LED 500
